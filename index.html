@@ -335,6 +335,9 @@
         let W, H, dpr;
         let nodes = [];
         let mouse = { x: -1e4, y: -1e4 };
+        const loadTime = performance.now();
+        const RESIZE_LOCK_MS = 7000;
+
         const intro = {
           phase: "waiting",
           seedOpacity: 0,
@@ -347,6 +350,7 @@
           centerX: 0,
           centerY: 0,
         };
+
         const GRID = 55,
           CONN_DIST = 130,
           MOUSE_R = 220,
@@ -690,16 +694,21 @@
           mouse.x = -1e4;
           mouse.y = -1e4;
         });
+
+        // Hard time-lock: completely ignore all resize events for the first 7 seconds
         window.addEventListener("resize", () => {
+          if (performance.now() - loadTime < RESIZE_LOCK_MS) return;
           anime.remove(nodes);
           resize();
         });
+
         resize();
         draw();
 
-        // ── Scramble utility ──
+        // ── Scramble utilities ──
         const CHARS =
           "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&";
+
         function scrambleText(el, targetText, duration, direction) {
           return new Promise((resolve) => {
             const len = targetText.length;
@@ -739,14 +748,63 @@
           });
         }
 
+        function scrambleHeroTwoTone(el, line1, line2, duration, direction) {
+          return new Promise((resolve) => {
+            const full = line1 + "\n" + line2;
+            const len = full.length;
+            const splitAt = line1.length;
+            let startTime = null;
+            function tick(ts) {
+              if (!startTime) startTime = ts;
+              const progress = Math.min(1, (ts - startTime) / duration);
+              let part1 = "",
+                part2 = "";
+              for (let i = 0; i < len; i++) {
+                const ch = full[i];
+                if (ch === " " || ch === "\n") {
+                  if (i <= splitAt) part1 += ch === "\n" ? "" : ch;
+                  else part2 += ch;
+                  continue;
+                }
+                const ct = i / len;
+                let outCh;
+                if (direction === "in") {
+                  const cp = (progress - ct * 0.5) / 0.5;
+                  if (cp >= 1) outCh = ch;
+                  else if (cp > 0)
+                    outCh = CHARS[Math.floor(Math.random() * CHARS.length)];
+                  else outCh = "\u00A0";
+                } else {
+                  const cp = (progress - ct * 0.4) / 0.6;
+                  if (cp >= 1) outCh = "\u00A0";
+                  else if (cp > 0)
+                    outCh = CHARS[Math.floor(Math.random() * CHARS.length)];
+                  else outCh = ch;
+                }
+                if (i < splitAt) part1 += outCh;
+                else if (i > splitAt) part2 += outCh;
+              }
+              el.innerHTML = part1 + '\n<span class="dim">' + part2 + "</span>";
+              if (progress < 1) requestAnimationFrame(tick);
+              else {
+                if (direction === "in")
+                  el.innerHTML =
+                    line1 + '\n<span class="dim">' + line2 + "</span>";
+                else el.innerHTML = "";
+                resolve();
+              }
+            }
+            requestAnimationFrame(tick);
+          });
+        }
+
         // ── Constants ──
         const heroH1 = document.getElementById("hero-h1");
-        const originalText = "The liquidity layer\nof prediction markets";
-        const originalHTML =
-          'The liquidity layer\n<span class="dim">of prediction markets</span>';
+        const HERO_LINE1 = "The liquidity layer";
+        const HERO_LINE2 = "of prediction markets";
         heroH1.textContent = "";
 
-        // ── Opening timeline ──
+        // ── Opening timeline (runs exactly once) ──
         const navEl = document.querySelector("nav");
         const tl = anime.timeline({ easing: "easeOutCubic" });
         intro.phase = "seed";
@@ -851,9 +909,7 @@
         );
 
         setTimeout(() => {
-          scrambleText(heroH1, originalText, 800, "in").then(() => {
-            heroH1.innerHTML = originalHTML;
-          });
+          scrambleHeroTwoTone(heroH1, HERO_LINE1, HERO_LINE2, 800, "in");
         }, 2800);
 
         // ── Whitepapers logic ──
@@ -865,7 +921,6 @@
         const paperNum1 = document.getElementById("paper-num-1");
         const paperNum2 = document.getElementById("paper-num-2");
         const paperDivider = document.getElementById("paper-divider");
-
         const PAPER_1_TEXT = "Unlocking Liquidity on Prediction Markets";
         const PAPER_2_TEXT = "Introducing Lattica";
         let showingPapers = false,
@@ -876,13 +931,11 @@
           animating = true;
           showingPapers = true;
           wpBtn.classList.add("active");
-          await scrambleText(heroH1, heroH1.textContent, 450, "out");
+          await scrambleHeroTwoTone(heroH1, HERO_LINE1, HERO_LINE2, 450, "out");
           heroH1.style.display = "none";
           paperTitle1.textContent = "";
           paperTitle2.textContent = "";
           papersView.classList.add("visible");
-
-          // Parallel: both titles scramble in at the same time
           anime({
             targets: paperNum1,
             opacity: [0, 1],
@@ -903,12 +956,10 @@
             delay: 200,
             easing: "easeOutCubic",
           });
-
           await Promise.all([
             scrambleText(paperTitle1, PAPER_1_TEXT, 600, "in"),
             scrambleText(paperTitle2, PAPER_2_TEXT, 600, "in"),
           ]);
-
           anime({
             targets: backHint,
             opacity: [0, 1],
@@ -923,25 +974,19 @@
           animating = true;
           showingPapers = false;
           wpBtn.classList.remove("active");
-
-          // Parallel: both titles scramble out at the same time
           anime({
             targets: [paperNum1, paperNum2, paperDivider, backHint],
             opacity: 0,
             duration: 200,
             easing: "easeOutCubic",
           });
-
           await Promise.all([
             scrambleText(paperTitle1, PAPER_1_TEXT, 400, "out"),
             scrambleText(paperTitle2, PAPER_2_TEXT, 400, "out"),
           ]);
-
           papersView.classList.remove("visible");
-          heroH1.textContent = "";
           heroH1.style.display = "";
-          await scrambleText(heroH1, originalText, 550, "in");
-          heroH1.innerHTML = originalHTML;
+          await scrambleHeroTwoTone(heroH1, HERO_LINE1, HERO_LINE2, 550, "in");
           animating = false;
         }
 
