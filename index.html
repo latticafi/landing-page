@@ -335,9 +335,6 @@
         let W, H, dpr;
         let nodes = [];
         let mouse = { x: -1e4, y: -1e4 };
-        const loadTime = performance.now();
-        const RESIZE_LOCK_MS = 7000;
-
         const intro = {
           phase: "waiting",
           seedOpacity: 0,
@@ -350,13 +347,11 @@
           centerX: 0,
           centerY: 0,
         };
-
         const GRID = 55,
           CONN_DIST = 130,
           MOUSE_R = 220,
           SUB_NODES_PER = 3;
-
-        function resize() {
+        function setCanvasSize() {
           dpr = window.devicePixelRatio || 1;
           W = window.innerWidth;
           H = window.innerHeight;
@@ -368,9 +363,7 @@
           intro.centerX = W / 2;
           intro.centerY = H * 0.45;
           intro.rippleMax = Math.sqrt(W * W + H * H);
-          buildLattice();
         }
-
         function buildLattice() {
           nodes = [];
           const pad = GRID * 2,
@@ -453,7 +446,6 @@
               });
           });
         }
-
         function makeNode(bx, by, tier, type) {
           const rm = { bright: 1.4, mid: 1.0, dim: 0.65, micro: 0.45 },
             om = { bright: 0.5, mid: 0.25, dim: 0.12, micro: 0.18 };
@@ -471,13 +463,11 @@
             distFromCenter: 0,
           };
         }
-
         function getWaveReveal(n) {
           if (intro.phase !== "ripple") return 0;
           const d = intro.rippleRadius - n.distFromCenter;
           return d < 0 ? 0 : Math.min(1, d / 200);
         }
-
         function draw() {
           ctx.clearRect(0, 0, W, H);
           const cd2 = CONN_DIST * CONN_DIST,
@@ -485,7 +475,6 @@
             time = performance.now() * 0.001;
           const isRipple = intro.phase === "ripple",
             ao = intro.ambientOpacity;
-
           if (intro.seedOpacity > 0.01) {
             const cx = intro.centerX,
               cy = intro.centerY,
@@ -509,7 +498,6 @@
             ctx.fillStyle = `rgba(240,240,250,${intro.seedOpacity})`;
             ctx.fill();
           }
-
           if (isRipple && intro.rippleOpacity > 0.001) {
             for (let r = 0; r < 3; r++) {
               const rr = intro.rippleRadius - r * 50;
@@ -524,7 +512,6 @@
               ctx.stroke();
             }
           }
-
           if (isRipple) {
             for (let i = 0; i < nodes.length; i++) {
               const a = nodes[i];
@@ -592,7 +579,6 @@
               ctx.fill();
             }
           }
-
           if (ao > 0.005) {
             for (let i = 0; i < nodes.length; i++) {
               const a = nodes[i];
@@ -685,7 +671,6 @@
           }
           requestAnimationFrame(draw);
         }
-
         document.addEventListener("mousemove", (e) => {
           mouse.x = e.clientX;
           mouse.y = e.clientY;
@@ -694,21 +679,13 @@
           mouse.x = -1e4;
           mouse.y = -1e4;
         });
-
-        // Hard time-lock: completely ignore all resize events for the first 7 seconds
-        window.addEventListener("resize", () => {
-          if (performance.now() - loadTime < RESIZE_LOCK_MS) return;
-          anime.remove(nodes);
-          resize();
-        });
-
-        resize();
+        // Initial setup — no resize listener yet
+        setCanvasSize();
+        buildLattice();
         draw();
-
-        // ── Scramble utilities ──
+        // ── Scramble utility ──
         const CHARS =
           "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&";
-
         function scrambleText(el, targetText, duration, direction) {
           return new Promise((resolve) => {
             const len = targetText.length;
@@ -747,7 +724,6 @@
             requestAnimationFrame(tick);
           });
         }
-
         function scrambleHeroTwoTone(el, line1, line2, duration, direction) {
           return new Promise((resolve) => {
             const full = line1 + "\n" + line2;
@@ -797,18 +773,17 @@
             requestAnimationFrame(tick);
           });
         }
-
         // ── Constants ──
         const heroH1 = document.getElementById("hero-h1");
         const HERO_LINE1 = "The liquidity layer";
         const HERO_LINE2 = "of prediction markets";
         heroH1.textContent = "";
-
-        // ── Opening timeline (runs exactly once) ──
+        // ── Resize guard: block all rebuilds until intro is fully done ──
+        let resizeReady = false;
+        // ── Opening timeline ──
         const navEl = document.querySelector("nav");
         const tl = anime.timeline({ easing: "easeOutCubic" });
         intro.phase = "seed";
-
         tl.add({
           targets: intro,
           seedOpacity: [0, 1],
@@ -904,13 +879,26 @@
             opacity: [0, 1],
             translateY: [-6, 0],
             duration: 350,
+            complete: () => {
+              // Mark intro complete and start listening for resize
+              // Delay enabling by a frame to avoid any final layout-triggered resize
+              requestAnimationFrame(() => {
+                resizeReady = true;
+              });
+              let resizeTimer;
+              window.addEventListener("resize", () => {
+                if (!resizeReady) return;
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                  anime.remove(nodes);
+                  setCanvasSize();
+                  buildLattice();
+                }, 150);
+              });
+            },
           },
           "-=800",
         );
-
-        setTimeout(() => {
-          scrambleHeroTwoTone(heroH1, HERO_LINE1, HERO_LINE2, 800, "in");
-        }, 2800);
 
         // ── Whitepapers logic ──
         const papersView = document.getElementById("papers-view");
@@ -926,12 +914,29 @@
         let showingPapers = false,
           animating = false;
 
-        async function showPapers() {
+        // FIX 2: Hash-based routing helper
+        function updateHash(view) {
+          const newHash = view === "whitepapers" ? "#whitepapers" : "";
+          if (window.location.hash !== newHash) {
+            history.replaceState(null, "", newHash || window.location.pathname);
+          }
+        }
+
+        async function showPapers(skipHeroOut) {
           if (animating) return;
           animating = true;
           showingPapers = true;
           wpBtn.classList.add("active");
-          await scrambleHeroTwoTone(heroH1, HERO_LINE1, HERO_LINE2, 450, "out");
+          updateHash("whitepapers");
+          if (!skipHeroOut) {
+            await scrambleHeroTwoTone(
+              heroH1,
+              HERO_LINE1,
+              HERO_LINE2,
+              450,
+              "out",
+            );
+          }
           heroH1.style.display = "none";
           paperTitle1.textContent = "";
           paperTitle2.textContent = "";
@@ -968,12 +973,12 @@
           });
           animating = false;
         }
-
         async function hidePapers() {
           if (animating) return;
           animating = true;
           showingPapers = false;
           wpBtn.classList.remove("active");
+          updateHash("home");
           anime({
             targets: [paperNum1, paperNum2, paperDivider, backHint],
             opacity: 0,
@@ -989,7 +994,6 @@
           await scrambleHeroTwoTone(heroH1, HERO_LINE1, HERO_LINE2, 550, "in");
           animating = false;
         }
-
         wpBtn.addEventListener("click", (e) => {
           e.preventDefault();
           showingPapers ? hidePapers() : showPapers();
@@ -997,6 +1001,25 @@
         backHint.addEventListener("click", () => {
           if (showingPapers) hidePapers();
         });
+
+        // FIX 2: Listen for back/forward navigation
+        window.addEventListener("hashchange", () => {
+          const wantsPapers = window.location.hash === "#whitepapers";
+          if (wantsPapers && !showingPapers) showPapers();
+          else if (!wantsPapers && showingPapers) hidePapers();
+        });
+
+        // FIX 2: Check hash on load — if #whitepapers, show papers after intro
+        const startOnPapers = window.location.hash === "#whitepapers";
+        if (startOnPapers) {
+          setTimeout(() => {
+            showPapers(true);
+          }, 2800);
+        } else {
+          setTimeout(() => {
+            scrambleHeroTwoTone(heroH1, HERO_LINE1, HERO_LINE2, 800, "in");
+          }, 2800);
+        }
       })();
     </script>
   </body>
