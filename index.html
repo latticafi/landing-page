@@ -827,9 +827,6 @@
             rippleOpacity: [0.6, 0],
             duration: 900,
             easing: "easeOutCubic",
-            complete: () => {
-              intro.phase = "done";
-            },
           },
           "-=600",
         );
@@ -839,6 +836,9 @@
             ambientOpacity: [0, 1],
             duration: 2000,
             easing: "easeInOutCubic",
+            complete: () => {
+              intro.phase = "done";
+            },
           },
           "-=600",
         );
@@ -852,7 +852,7 @@
             duration: 800,
             easing: "linear",
           },
-          "-=1400",
+          "-=1900",
         );
         tl.add(
           {
@@ -861,7 +861,7 @@
             translateY: [-6, 0],
             duration: 450,
           },
-          "-=1200",
+          "-=1700",
         );
         tl.add(
           {
@@ -871,7 +871,7 @@
             duration: 350,
             delay: anime.stagger(30),
           },
-          "-=1000",
+          "-=1500",
         );
         tl.add(
           {
@@ -880,11 +880,10 @@
             translateY: [-6, 0],
             duration: 350,
             complete: () => {
-              // Mark intro complete and start listening for resize
-              // Delay enabling by a frame to avoid any final layout-triggered resize
-              requestAnimationFrame(() => {
+              // Delay enabling resize by 2s so any post-load layout settling is ignored
+              setTimeout(() => {
                 resizeReady = true;
-              });
+              }, 2000);
               let resizeTimer;
               window.addEventListener("resize", () => {
                 if (!resizeReady) return;
@@ -897,7 +896,7 @@
               });
             },
           },
-          "-=800",
+          "-=1300",
         );
 
         // ── Whitepapers logic ──
@@ -1014,11 +1013,11 @@
         if (startOnPapers) {
           setTimeout(() => {
             showPapers(true);
-          }, 2800);
+          }, 2200);
         } else {
           setTimeout(() => {
             scrambleHeroTwoTone(heroH1, HERO_LINE1, HERO_LINE2, 800, "in");
-          }, 2800);
+          }, 2200);
         }
       })();
     </script>
