@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lattica</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&family=Space+Mono:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      :root {
+        --bg: #090909;
+        --white: rgba(255, 255, 255, 0.82);
+        --silver: rgba(255, 255, 255, 0.35);
+        --silver-dim: rgba(255, 255, 255, 0.18);
+        --ghost: rgba(255, 255, 255, 0.07);
+      }
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        font-family: "DM Sans", sans-serif;
+        background: var(--bg);
+        color: var(--white);
+        -webkit-font-smoothing: antialiased;
+      }
+      canvas#lattice {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+      }
+      .vignette {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse 55% 50% at 50% 48%,
+          transparent 0%,
+          var(--bg) 100%
+        );
+      }
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        padding: 0 48px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid transparent;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        opacity: 0;
+      }
+      .logo svg {
+        width: 24px;
+        height: 24px;
+      }
+      .logo span {
+        font-family: "DM Sans", sans-serif;
+        font-size: 17px;
+        font-weight: 500;
+        color: var(--white);
+      }
+      .nav-links {
+        display: flex;
+        gap: 32px;
+        list-style: none;
+      }
+      .nav-links li {
+        opacity: 0;
+      }
+      .nav-links a {
+        font-size: 13.5px;
+        font-weight: 400;
+        color: var(--silver-dim);
+        text-decoration: none;
+        letter-spacing: 0.01em;
+        transition: color 0.4s ease;
+      }
+      .nav-links a:hover {
+        color: var(--silver);
+      }
+      .nav-end {
+        opacity: 0;
+      }
+      .nav-text-btn {
+        font-family: "DM Sans", sans-serif;
+        font-size: 16px;
+        font-weight: 400;
+        color: var(--silver);
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        letter-spacing: 0.01em;
+        transition: color 0.4s ease;
+        text-decoration: none;
+        display: inline-block;
+      }
+      .nav-text-btn:hover {
+        color: var(--white);
+      }
+      .nav-text-btn.active {
+        color: var(--white);
+      }
+      .hero {
+        position: relative;
+        z-index: 10;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 0 24px;
+        padding-bottom: 10vh;
+      }
+      .hero h1 {
+        font-size: clamp(38px, 5.5vw, 64px);
+        font-weight: 300;
+        line-height: 1.12;
+        letter-spacing: -0.025em;
+        color: var(--white);
+        max-width: 780px;
+        white-space: pre-line;
+      }
+      .hero h1 .dim {
+        color: var(--silver);
+      }
+      .papers-view {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        width: 100%;
+      }
+      .papers-view.visible {
+        display: flex;
+      }
+      .paper-link {
+        display: block;
+        text-decoration: none;
+        text-align: center;
+        padding: 20px 32px;
+        border-radius: 10px;
+        width: 100%;
+        max-width: 860px;
+      }
+      .paper-link:hover .paper-title {
+        color: var(--white);
+      }
+      .paper-link:hover .paper-number {
+        color: var(--silver);
+      }
+      .paper-number {
+        font-family: "Space Mono", monospace;
+        font-size: 13px;
+        letter-spacing: 0.1em;
+        color: var(--silver-dim);
+        margin-bottom: 8px;
+        opacity: 0;
+        transition: color 0.3s ease;
+      }
+      .paper-title {
+        font-size: clamp(24px, 3.5vw, 38px);
+        font-weight: 300;
+        letter-spacing: -0.02em;
+        color: var(--silver);
+        transition: color 0.3s ease;
+        line-height: 1.2;
+        white-space: nowrap;
+        display: inline;
+      }
+      .paper-divider {
+        width: 50px;
+        height: 1px;
+        background: var(--ghost);
+        opacity: 0;
+      }
+      .back-hint {
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        color: var(--silver-dim);
+        cursor: pointer;
+        opacity: 0;
+        transition: color 0.3s ease;
+        text-transform: uppercase;
+        margin-top: 12px;
+      }
+      .back-hint:hover {
+        color: var(--silver);
+      }
+      @media (max-width: 768px) {
+        nav {
+          padding: 0 20px;
+        }
+        .nav-links {
+          display: none;
+        }
+        .hero h1 {
+          font-size: 32px;
+        }
+        .paper-title {
+          font-size: 20px;
+          white-space: normal;
+        }
+        .paper-link {
+          padding: 16px 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="lattice"></canvas>
+    <div class="vignette"></div>
+    <nav>
+      <a href="/" class="logo">
+        <svg
+          viewBox="0 0 1601 1617"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M1200 1154.83V692.945L799.992 923.889V1385.78L1200 1154.83Z"
+            fill="#8A8A8A"
+          />
+          <path
+            d="M400 1154.83L800.007 1385.78V923.889L400 692.945V1154.83Z"
+            fill="#B9B9B9"
+          />
+          <path
+            d="M1200.01 692.944L800.007 462L400 692.945L800.007 923.889L1200.01 692.944Z"
+            fill="#EEEEEE"
+          />
+          <path
+            d="M1600 1385.83V923.945L1199.99 1154.89V1616.78L1600 1385.83Z"
+            fill="#8D8D8D"
+          />
+          <path
+            d="M800 1385.83L1200.01 1616.78V1154.89L800 923.945V1385.83Z"
+            fill="#A2A2A2"
+          />
+          <path
+            d="M1600.01 923.944L1200.01 693L800 923.945L1200.01 1154.89L1600.01 923.944Z"
+            fill="#DFDFDF"
+          />
+          <path
+            d="M800 1385.83V923.945L399.992 1154.89V1616.78L800 1385.83Z"
+            fill="#969696"
+          />
+          <path
+            d="M0 1385.83L400.007 1616.78V1154.89L0 923.945V1385.83Z"
+            fill="#B8B8B8"
+          />
+          <path
+            d="M800.014 923.944L400.007 693L0 923.945L400.007 1154.89L800.014 923.944Z"
+            fill="#E4E4E4"
+          />
+          <path
+            d="M1200 692.834V230.945L799.992 461.89V923.778L1200 692.834Z"
+            fill="#7E7E7E"
+          />
+          <path
+            d="M400 692.834L800.007 923.778V461.889L400 230.945V692.834Z"
+            fill="#C4C4C4"
+          />
+          <path
+            d="M1200.01 230.944L800.007 0L400 230.945L800.007 461.889L1200.01 230.944Z"
+            fill="#F0F0F0"
+          />
+          <path
+            d="M812 923L798 915L784 923L798 931L812 923Z"
+            fill="black"
+            fill-opacity="0.2"
+          />
+        </svg>
+        <span>Lattica</span>
+      </a>
+      <ul class="nav-links"></ul>
+      <div class="nav-end">
+        <button class="nav-text-btn" id="whitepapers-btn">Whitepapers</button>
+      </div>
+    </nav>
+    <section class="hero">
+      <h1 id="hero-h1"></h1>
+      <div class="papers-view" id="papers-view">
+        <a
+          href="https://docs.lattica.finance/unlocking-liquidity.pdf"
+          class="paper-link"
+          target="_blank"
+        >
+          <div class="paper-number" id="paper-num-1">I</div>
+          <span class="paper-title" id="paper-title-1"></span>
+        </a>
+        <div class="paper-divider" id="paper-divider"></div>
+        <a
+          href="https://docs.lattica.finance/intro-lattica.pdf"
+          class="paper-link"
+          target="_blank"
+        >
+          <div class="paper-number" id="paper-num-2">II</div>
+          <span class="paper-title" id="paper-title-2"></span>
+        </a>
+        <div class="back-hint" id="back-hint">← Back</div>
+      </div>
+    </section>
+    <script>
+      (() => {
+        const canvas = document.getElementById("lattice");
+        const ctx = canvas.getContext("2d");
+        let W, H, dpr;
+        let nodes = [];
+        let mouse = { x: -1e4, y: -1e4 };
+        const intro = {
+          phase: "waiting",
+          seedOpacity: 0,
+          seedRadius: 2,
+          seedGlow: 0,
+          rippleRadius: 0,
+          rippleMax: 0,
+          rippleOpacity: 0.6,
+          ambientOpacity: 0,
+          centerX: 0,
+          centerY: 0,
+        };
+        const GRID = 55,
+          CONN_DIST = 130,
+          MOUSE_R = 220,
+          SUB_NODES_PER = 3;
+
+        function resize() {
+          dpr = window.devicePixelRatio || 1;
+          W = window.innerWidth;
+          H = window.innerHeight;
+          canvas.width = W * dpr;
+          canvas.height = H * dpr;
+          canvas.style.width = W + "px";
+          canvas.style.height = H + "px";
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          intro.centerX = W / 2;
+          intro.centerY = H * 0.45;
+          intro.rippleMax = Math.sqrt(W * W + H * H);
+          buildLattice();
+        }
+
+        function buildLattice() {
+          nodes = [];
+          const pad = GRID * 2,
+            cols = Math.ceil((W + pad * 2) / GRID),
+            rows = Math.ceil((H + pad * 2) / GRID);
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              const stagger = (r % 2) * (GRID * 0.5);
+              const bx = -pad + c * GRID + stagger,
+                by = -pad + r * GRID;
+              const tier = Math.random();
+              nodes.push(
+                makeNode(
+                  bx,
+                  by,
+                  tier > 0.7 ? "bright" : tier > 0.3 ? "mid" : "dim",
+                  "main",
+                ),
+              );
+              if (Math.random() > 0.7) {
+                const count = 1 + Math.floor(Math.random() * SUB_NODES_PER);
+                for (let s = 0; s < count; s++) {
+                  const angle =
+                    ((Math.PI * 2) / count) * s + Math.random() * 0.5;
+                  const dist = 8 + Math.random() * 18;
+                  nodes.push(
+                    makeNode(
+                      bx + Math.cos(angle) * dist,
+                      by + Math.sin(angle) * dist,
+                      "micro",
+                      "satellite",
+                    ),
+                  );
+                }
+              }
+            }
+          }
+          nodes.forEach((n) => {
+            const dx = n.bx - intro.centerX,
+              dy = n.by - intro.centerY;
+            n.distFromCenter = Math.sqrt(dx * dx + dy * dy);
+          });
+          nodes.forEach((n) => {
+            const d1 = 4000 + Math.random() * 6000,
+              d2 = 4000 + Math.random() * 6000;
+            const amp =
+              n.type === "satellite"
+                ? 6 + Math.random() * 10
+                : 10 + Math.random() * 20;
+            anime({
+              targets: n,
+              x: [
+                { value: n.bx + Math.cos(n.phase) * amp, duration: d1 },
+                {
+                  value: n.bx - Math.cos(n.phase + 1) * amp * 0.6,
+                  duration: d2,
+                },
+              ],
+              y: [
+                { value: n.by + Math.sin(n.phaseY) * amp, duration: d2 },
+                {
+                  value: n.by - Math.sin(n.phaseY + 1) * amp * 0.6,
+                  duration: d1,
+                },
+              ],
+              easing: "easeInOutSine",
+              loop: true,
+              direction: "alternate",
+              delay: Math.random() * 2000,
+            });
+            if (n.tier === "bright" || Math.random() > 0.8)
+              anime({
+                targets: n,
+                radius: [n.radius, n.radius * 1.6],
+                easing: "easeInOutSine",
+                duration: 2000 + Math.random() * 3000,
+                loop: true,
+                direction: "alternate",
+                delay: Math.random() * 2000,
+              });
+          });
+        }
+
+        function makeNode(bx, by, tier, type) {
+          const rm = { bright: 1.4, mid: 1.0, dim: 0.65, micro: 0.45 },
+            om = { bright: 0.5, mid: 0.25, dim: 0.12, micro: 0.18 };
+          return {
+            bx,
+            by,
+            x: bx,
+            y: by,
+            phase: Math.random() * Math.PI * 2,
+            phaseY: Math.random() * Math.PI * 2,
+            radius: rm[tier] || 1,
+            baseOpacity: om[tier] || 0.15,
+            tier,
+            type,
+            distFromCenter: 0,
+          };
+        }
+
+        function getWaveReveal(n) {
+          if (intro.phase !== "ripple") return 0;
+          const d = intro.rippleRadius - n.distFromCenter;
+          return d < 0 ? 0 : Math.min(1, d / 200);
+        }
+
+        function draw() {
+          ctx.clearRect(0, 0, W, H);
+          const cd2 = CONN_DIST * CONN_DIST,
+            mr2 = MOUSE_R * MOUSE_R,
+            time = performance.now() * 0.001;
+          const isRipple = intro.phase === "ripple",
+            ao = intro.ambientOpacity;
+
+          if (intro.seedOpacity > 0.01) {
+            const cx = intro.centerX,
+              cy = intro.centerY,
+              glowR = intro.seedRadius * 12 + intro.seedGlow * 30;
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR);
+            grad.addColorStop(
+              0,
+              `rgba(220,220,230,${intro.seedOpacity * 0.15})`,
+            );
+            grad.addColorStop(
+              0.4,
+              `rgba(200,200,215,${intro.seedOpacity * 0.06})`,
+            );
+            grad.addColorStop(1, "rgba(180,180,195,0)");
+            ctx.beginPath();
+            ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx, cy, intro.seedRadius, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(240,240,250,${intro.seedOpacity})`;
+            ctx.fill();
+          }
+
+          if (isRipple && intro.rippleOpacity > 0.001) {
+            for (let r = 0; r < 3; r++) {
+              const rr = intro.rippleRadius - r * 50;
+              if (rr < 0) continue;
+              const fade = Math.max(0, 1 - rr / intro.rippleMax);
+              const alpha = fade * intro.rippleOpacity * (1 - r * 0.3) * 0.18;
+              if (alpha < 0.001) continue;
+              ctx.beginPath();
+              ctx.arc(intro.centerX, intro.centerY, rr, 0, Math.PI * 2);
+              ctx.strokeStyle = `rgba(210,210,225,${alpha})`;
+              ctx.lineWidth = 1.2 - r * 0.3;
+              ctx.stroke();
+            }
+          }
+
+          if (isRipple) {
+            for (let i = 0; i < nodes.length; i++) {
+              const a = nodes[i];
+              const wA = getWaveReveal(a);
+              if (wA < 0.01) continue;
+              for (let j = i + 1; j < nodes.length; j++) {
+                const b = nodes[j];
+                const wB = getWaveReveal(b);
+                if (wB < 0.01) continue;
+                const dx = a.x - b.x,
+                  dy = a.y - b.y,
+                  d2 = dx * dx + dy * dy;
+                if (d2 > cd2) continue;
+                const dist = Math.sqrt(d2);
+                const vMin = Math.min(wA, wB);
+                let alpha = (1 - dist / CONN_DIST) * 0.06 * vMin;
+                let lum = 120;
+                if (vMin > 0.05 && vMin < 0.7) {
+                  const fl = 1 - Math.abs(vMin - 0.35) / 0.35;
+                  alpha += fl * 0.12;
+                  lum = Math.round(lum + fl * 80);
+                }
+                if (
+                  a.type === "satellite" &&
+                  b.type === "satellite" &&
+                  dist < 40
+                ) {
+                  ctx.setLineDash([2, 4]);
+                  alpha *= 1.8;
+                } else {
+                  ctx.setLineDash([]);
+                }
+                ctx.beginPath();
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+                ctx.strokeStyle = `rgba(${lum},${lum},${Math.min(255, lum + 15)},${alpha})`;
+                ctx.lineWidth =
+                  a.type === "satellite" || b.type === "satellite" ? 0.4 : 0.5;
+                ctx.stroke();
+              }
+            }
+            ctx.setLineDash([]);
+            for (let i = 0; i < nodes.length; i++) {
+              const n = nodes[i];
+              const wN = getWaveReveal(n);
+              if (wN < 0.01) continue;
+              let alpha = n.baseOpacity * wN,
+                r = n.radius,
+                lum = 160;
+              if (wN > 0.02 && wN < 0.65) {
+                const fl = 1 - Math.abs(wN - 0.3) / 0.3;
+                alpha = Math.min(1, alpha + fl * 0.7);
+                r += fl * 2;
+                lum = Math.min(255, Math.round(lum + fl * 95));
+                if (fl > 0.3) {
+                  ctx.beginPath();
+                  ctx.arc(n.x, n.y, r * 5, 0, Math.PI * 2);
+                  ctx.fillStyle = `rgba(${lum},${lum},255,${fl * 0.04})`;
+                  ctx.fill();
+                }
+              }
+              ctx.beginPath();
+              ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(${lum},${lum},${Math.min(255, lum + 10)},${alpha})`;
+              ctx.fill();
+            }
+          }
+
+          if (ao > 0.005) {
+            for (let i = 0; i < nodes.length; i++) {
+              const a = nodes[i];
+              for (let j = i + 1; j < nodes.length; j++) {
+                const b = nodes[j];
+                const dx = a.x - b.x,
+                  dy = a.y - b.y,
+                  d2 = dx * dx + dy * dy;
+                if (d2 > cd2) continue;
+                const dist = Math.sqrt(d2);
+                let alpha = (1 - dist / CONN_DIST) * 0.06 * ao;
+                const mx = (a.x + b.x) * 0.5,
+                  my = (a.y + b.y) * 0.5,
+                  mdx = mouse.x - mx,
+                  mdy = mouse.y - my,
+                  md2 = mdx * mdx + mdy * mdy;
+                let lum = 120;
+                if (md2 < mr2) {
+                  const f = 1 - Math.sqrt(md2) / MOUSE_R;
+                  const bo = f * f;
+                  alpha += bo * 0.18 * ao;
+                  lum = Math.round(120 + 135 * bo);
+                }
+                if (
+                  a.type === "satellite" &&
+                  b.type === "satellite" &&
+                  dist < 40
+                ) {
+                  ctx.setLineDash([2, 4]);
+                  alpha *= 1.8;
+                } else {
+                  ctx.setLineDash([]);
+                }
+                ctx.beginPath();
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+                ctx.strokeStyle = `rgba(${lum},${lum},${Math.min(255, lum + 15)},${alpha})`;
+                ctx.lineWidth =
+                  a.type === "satellite" || b.type === "satellite" ? 0.4 : 0.5;
+                ctx.stroke();
+              }
+            }
+            ctx.setLineDash([]);
+            if (mouse.x > -1000) {
+              for (let ring = 0; ring < 3; ring++) {
+                const rr = 60 + ring * 55;
+                const rot =
+                  time * (0.08 + ring * 0.03) * (ring % 2 === 0 ? 1 : -1);
+                const sides = 6;
+                const alpha = (0.03 - ring * 0.008) * ao;
+                ctx.beginPath();
+                for (let s = 0; s <= sides; s++) {
+                  const angle = ((Math.PI * 2) / sides) * s + rot;
+                  const px = mouse.x + Math.cos(angle) * rr;
+                  const py = mouse.y + Math.sin(angle) * rr;
+                  s === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.strokeStyle = `rgba(200,200,210,${alpha})`;
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+              }
+            }
+            for (let i = 0; i < nodes.length; i++) {
+              const n = nodes[i];
+              let alpha = n.baseOpacity * ao,
+                r = n.radius,
+                lum = 160;
+              const ndx = mouse.x - n.x,
+                ndy = mouse.y - n.y,
+                nd2 = ndx * ndx + ndy * ndy;
+              if (nd2 < mr2) {
+                const f = 1 - Math.sqrt(nd2) / MOUSE_R;
+                const bo = f * f;
+                alpha = Math.min(0.9, alpha + bo * 0.6 * ao);
+                r += bo * 2.2;
+                lum = Math.round(160 + 95 * bo);
+              }
+              if (nd2 < mr2 * 0.3 && n.tier === "bright") {
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, r * 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${lum},${lum},${Math.min(255, lum + 20)},${alpha * 0.06})`;
+                ctx.fill();
+              }
+              ctx.beginPath();
+              ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(${lum},${lum},${Math.min(255, lum + 10)},${alpha})`;
+              ctx.fill();
+            }
+          }
+          requestAnimationFrame(draw);
+        }
+
+        document.addEventListener("mousemove", (e) => {
+          mouse.x = e.clientX;
+          mouse.y = e.clientY;
+        });
+        document.addEventListener("mouseleave", () => {
+          mouse.x = -1e4;
+          mouse.y = -1e4;
+        });
+        window.addEventListener("resize", () => {
+          anime.remove(nodes);
+          resize();
+        });
+        resize();
+        draw();
+
+        // ── Scramble utility ──
+        const CHARS =
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&";
+        function scrambleText(el, targetText, duration, direction) {
+          return new Promise((resolve) => {
+            const len = targetText.length;
+            let startTime = null;
+            function tick(ts) {
+              if (!startTime) startTime = ts;
+              const progress = Math.min(1, (ts - startTime) / duration);
+              let result = "";
+              for (let i = 0; i < len; i++) {
+                if (targetText[i] === " " || targetText[i] === "\n") {
+                  result += targetText[i];
+                  continue;
+                }
+                const ct = i / len;
+                if (direction === "in") {
+                  const cp = (progress - ct * 0.5) / 0.5;
+                  if (cp >= 1) result += targetText[i];
+                  else if (cp > 0)
+                    result += CHARS[Math.floor(Math.random() * CHARS.length)];
+                  else result += "\u00A0";
+                } else {
+                  const cp = (progress - ct * 0.4) / 0.6;
+                  if (cp >= 1) result += "\u00A0";
+                  else if (cp > 0)
+                    result += CHARS[Math.floor(Math.random() * CHARS.length)];
+                  else result += targetText[i];
+                }
+              }
+              el.textContent = result;
+              if (progress < 1) requestAnimationFrame(tick);
+              else {
+                el.textContent = direction === "in" ? targetText : "";
+                resolve();
+              }
+            }
+            requestAnimationFrame(tick);
+          });
+        }
+
+        // ── Constants ──
+        const heroH1 = document.getElementById("hero-h1");
+        const originalText = "The liquidity layer\nof prediction markets";
+        const originalHTML =
+          'The liquidity layer\n<span class="dim">of prediction markets</span>';
+        heroH1.textContent = "";
+
+        // ── Opening timeline ──
+        const navEl = document.querySelector("nav");
+        const tl = anime.timeline({ easing: "easeOutCubic" });
+        intro.phase = "seed";
+
+        tl.add({
+          targets: intro,
+          seedOpacity: [0, 1],
+          seedRadius: [0.5, 3],
+          seedGlow: [0, 1.2],
+          duration: 800,
+          delay: 200,
+          easing: "easeOutExpo",
+        });
+        tl.add({
+          targets: intro,
+          seedRadius: [3, 4],
+          seedGlow: [1.2, 1.8],
+          duration: 300,
+          easing: "easeInOutSine",
+          direction: "alternate",
+        });
+        tl.add({
+          targets: intro,
+          rippleRadius: [0, intro.rippleMax || 2000],
+          duration: 2400,
+          easing: "easeOutQuart",
+          begin: () => {
+            intro.phase = "ripple";
+          },
+        });
+        tl.add(
+          {
+            targets: intro,
+            seedOpacity: [1, 0],
+            seedRadius: [4, 8],
+            seedGlow: [1.8, 0],
+            duration: 600,
+            easing: "easeOutCubic",
+          },
+          "-=2200",
+        );
+        tl.add(
+          {
+            targets: intro,
+            rippleOpacity: [0.6, 0],
+            duration: 900,
+            easing: "easeOutCubic",
+            complete: () => {
+              intro.phase = "done";
+            },
+          },
+          "-=600",
+        );
+        tl.add(
+          {
+            targets: intro,
+            ambientOpacity: [0, 1],
+            duration: 2000,
+            easing: "easeInOutCubic",
+          },
+          "-=600",
+        );
+        tl.add(
+          {
+            targets: navEl,
+            borderBottomColor: [
+              "rgba(255,255,255,0)",
+              "rgba(255,255,255,0.07)",
+            ],
+            duration: 800,
+            easing: "linear",
+          },
+          "-=1400",
+        );
+        tl.add(
+          {
+            targets: ".logo",
+            opacity: [0, 1],
+            translateY: [-6, 0],
+            duration: 450,
+          },
+          "-=1200",
+        );
+        tl.add(
+          {
+            targets: ".nav-links li",
+            opacity: [0, 1],
+            translateY: [-6, 0],
+            duration: 350,
+            delay: anime.stagger(30),
+          },
+          "-=1000",
+        );
+        tl.add(
+          {
+            targets: ".nav-end",
+            opacity: [0, 1],
+            translateY: [-6, 0],
+            duration: 350,
+          },
+          "-=800",
+        );
+
+        setTimeout(() => {
+          scrambleText(heroH1, originalText, 800, "in").then(() => {
+            heroH1.innerHTML = originalHTML;
+          });
+        }, 2800);
+
+        // ── Whitepapers logic ──
+        const papersView = document.getElementById("papers-view");
+        const wpBtn = document.getElementById("whitepapers-btn");
+        const backHint = document.getElementById("back-hint");
+        const paperTitle1 = document.getElementById("paper-title-1");
+        const paperTitle2 = document.getElementById("paper-title-2");
+        const paperNum1 = document.getElementById("paper-num-1");
+        const paperNum2 = document.getElementById("paper-num-2");
+        const paperDivider = document.getElementById("paper-divider");
+
+        const PAPER_1_TEXT = "Unlocking Liquidity on Prediction Markets";
+        const PAPER_2_TEXT = "Introducing Lattica";
+        let showingPapers = false,
+          animating = false;
+
+        async function showPapers() {
+          if (animating) return;
+          animating = true;
+          showingPapers = true;
+          wpBtn.classList.add("active");
+          await scrambleText(heroH1, heroH1.textContent, 450, "out");
+          heroH1.style.display = "none";
+          paperTitle1.textContent = "";
+          paperTitle2.textContent = "";
+          papersView.classList.add("visible");
+
+          // Parallel: both titles scramble in at the same time
+          anime({
+            targets: paperNum1,
+            opacity: [0, 1],
+            duration: 300,
+            easing: "easeOutCubic",
+          });
+          anime({
+            targets: paperNum2,
+            opacity: [0, 1],
+            duration: 300,
+            delay: 50,
+            easing: "easeOutCubic",
+          });
+          anime({
+            targets: paperDivider,
+            opacity: [0, 1],
+            duration: 400,
+            delay: 200,
+            easing: "easeOutCubic",
+          });
+
+          await Promise.all([
+            scrambleText(paperTitle1, PAPER_1_TEXT, 600, "in"),
+            scrambleText(paperTitle2, PAPER_2_TEXT, 600, "in"),
+          ]);
+
+          anime({
+            targets: backHint,
+            opacity: [0, 1],
+            duration: 400,
+            easing: "easeOutCubic",
+          });
+          animating = false;
+        }
+
+        async function hidePapers() {
+          if (animating) return;
+          animating = true;
+          showingPapers = false;
+          wpBtn.classList.remove("active");
+
+          // Parallel: both titles scramble out at the same time
+          anime({
+            targets: [paperNum1, paperNum2, paperDivider, backHint],
+            opacity: 0,
+            duration: 200,
+            easing: "easeOutCubic",
+          });
+
+          await Promise.all([
+            scrambleText(paperTitle1, PAPER_1_TEXT, 400, "out"),
+            scrambleText(paperTitle2, PAPER_2_TEXT, 400, "out"),
+          ]);
+
+          papersView.classList.remove("visible");
+          heroH1.textContent = "";
+          heroH1.style.display = "";
+          await scrambleText(heroH1, originalText, 550, "in");
+          heroH1.innerHTML = originalHTML;
+          animating = false;
+        }
+
+        wpBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          showingPapers ? hidePapers() : showPapers();
+        });
+        backHint.addEventListener("click", () => {
+          if (showingPapers) hidePapers();
+        });
+      })();
+    </script>
+  </body>
+</html>
