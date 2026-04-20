@@ -142,9 +142,6 @@
       .nav-text-btn:hover {
         color: var(--white);
       }
-      .nav-text-btn.active {
-        color: var(--white);
-      }
       .hero {
         position: relative;
         z-index: 10;
@@ -256,7 +253,7 @@
     <canvas id="lattice"></canvas>
     <div class="vignette"></div>
     <nav>
-      <a href="/" class="logo">
+      <div class="logo">
         <svg
           viewBox="0 0 1601 1617"
           fill="none"
@@ -317,10 +314,10 @@
           />
         </svg>
         <span>Lattica</span>
-      </a>
+      </div>
       <ul class="nav-links"></ul>
       <div class="nav-end">
-        <button class="nav-text-btn" id="whitepapers-btn">Whitepapers</button>
+        <button class="nav-text-btn" id="nav-toggle-btn">Whitepapers</button>
       </div>
     </nav>
     <section class="hero">
@@ -742,6 +739,12 @@
             requestAnimationFrame(tick);
           });
         }
+        // Swap one word for another: scramble old out, then scramble new in.
+        async function scrambleSwap(el, fromText, toText, duration) {
+          const half = duration / 2;
+          await scrambleText(el, fromText, half, "out");
+          await scrambleText(el, toText, half, "in");
+        }
         function scrambleHeroTwoTone(el, line1, line2, duration, direction) {
           return new Promise((resolve) => {
             const full = line1 + "\n" + line2;
@@ -795,6 +798,8 @@
         const heroH1 = document.getElementById("hero-h1");
         const HERO_LINE1 = "The liquidity layer";
         const HERO_LINE2 = "of prediction markets";
+        const NAV_LABEL_HOME = "Whitepapers";
+        const NAV_LABEL_PAPERS = "Home";
         heroH1.textContent = "";
         // ── Resize guard: block all rebuilds until intro is fully done ──
         let resizeReady = false;
@@ -919,7 +924,7 @@
 
         // ── Whitepapers logic ──
         const papersView = document.getElementById("papers-view");
-        const wpBtn = document.getElementById("whitepapers-btn");
+        const navBtn = document.getElementById("nav-toggle-btn");
         const backHint = document.getElementById("back-hint");
         const paperTitle1 = document.getElementById("paper-title-1");
         const paperTitle2 = document.getElementById("paper-title-2");
@@ -931,7 +936,7 @@
         let showingPapers = false,
           animating = false;
 
-        // FIX 2: Hash-based routing helper
+        // Hash-based routing helper
         function updateHash(view) {
           const newHash = view === "whitepapers" ? "#whitepapers" : "";
           if (window.location.hash !== newHash) {
@@ -943,9 +948,10 @@
           if (animating) return;
           animating = true;
           showingPapers = true;
-          wpBtn.classList.add("active");
           updateHash("whitepapers");
+          // Swap nav button label in parallel with the hero transition.
           if (!skipHeroOut) {
+            scrambleSwap(navBtn, NAV_LABEL_HOME, NAV_LABEL_PAPERS, 450);
             await scrambleHeroTwoTone(
               heroH1,
               HERO_LINE1,
@@ -994,8 +1000,9 @@
           if (animating) return;
           animating = true;
           showingPapers = false;
-          wpBtn.classList.remove("active");
           updateHash("home");
+          // Swap nav button label back in parallel with the hero transition.
+          scrambleSwap(navBtn, NAV_LABEL_PAPERS, NAV_LABEL_HOME, 450);
           anime({
             targets: [paperNum1, paperNum2, paperDivider, backHint],
             opacity: 0,
@@ -1011,7 +1018,7 @@
           await scrambleHeroTwoTone(heroH1, HERO_LINE1, HERO_LINE2, 550, "in");
           animating = false;
         }
-        wpBtn.addEventListener("click", (e) => {
+        navBtn.addEventListener("click", (e) => {
           e.preventDefault();
           showingPapers ? hidePapers() : showPapers();
         });
@@ -1019,16 +1026,18 @@
           if (showingPapers) hidePapers();
         });
 
-        // FIX 2: Listen for back/forward navigation
+        // Listen for back/forward navigation
         window.addEventListener("hashchange", () => {
           const wantsPapers = window.location.hash === "#whitepapers";
           if (wantsPapers && !showingPapers) showPapers();
           else if (!wantsPapers && showingPapers) hidePapers();
         });
 
-        // FIX 2: Check hash on load — if #whitepapers, show papers after intro
+        // Check hash on load — if #whitepapers, show papers after intro
         const startOnPapers = window.location.hash === "#whitepapers";
         if (startOnPapers) {
+          // Pre-set the button label so no jarring swap is needed on load.
+          navBtn.textContent = NAV_LABEL_PAPERS;
           setTimeout(() => {
             showPapers(true);
           }, 2200);
