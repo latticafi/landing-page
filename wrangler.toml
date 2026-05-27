@@ -2,6 +2,11 @@ name = "lattica-landing"
 main = "src/worker.js"
 compatibility_date = "2026-05-23"
 
+routes = [
+  { pattern = "lattica.finance", custom_domain = true },
+  { pattern = "www.lattica.finance", custom_domain = true },
+]
+
 # Serve everything under ./public as static assets,
 # and let the Worker fall through to them via env.ASSETS.fetch().
 [assets]
@@ -29,8 +34,3 @@ ALLOWED_ORIGINS = "http://localhost:8787,http://localhost:8788,http://localhost:
 
 [observability]
 enabled = true
-
-routes = [
-  { pattern = "lattica.finance", custom_domain = true },
-  { pattern = "www.lattica.finance", custom_domain = true },
-]
