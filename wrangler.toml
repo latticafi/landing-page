@@ -1,0 +1,36 @@
+name = "lattica-landing"
+main = "src/worker.js"
+compatibility_date = "2026-05-23"
+
+# Serve everything under ./public as static assets,
+# and let the Worker fall through to them via env.ASSETS.fetch().
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# D1 database binding. After running `pnpm run db:create`, paste the
+# resulting database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "lattica_waitlist"
+database_id = "942de9a0-837f-4535-864f-3664fa9465fb"
+
+# Rate-limit binding (per-IP, per-Cloudflare-location).
+# namespace_id must be unique within your CF account; pick any positive integer.
+[[ratelimits]]
+name = "WAITLIST_LIMITER"
+namespace_id = "1001"
+simple = { limit = 10, period = 60 }
+
+# Public, non-secret. Comma-separated list of allowed Origin headers.
+# Add your production domain(s) here before deploying.
+[vars]
+ALLOWED_ORIGINS = "http://localhost:8787,http://localhost:8788,http://localhost:3000,https://lattica.fi,https://lattica.finance,https://lattica.xyz"
+
+[observability]
+enabled = true
+
+routes = [
+  { pattern = "lattica.finance", custom_domain = true },
+  { pattern = "www.lattica.finance", custom_domain = true },
+]
