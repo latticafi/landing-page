@@ -4,7 +4,56 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="turnstile-site-key" content="" />
+
     <title>Lattica</title>
+    <meta
+      name="description"
+      content="Trade the markets you want with the capital you need."
+    />
+    <link rel="canonical" href="https://lattica.finance/" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#090909" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Lattica" />
+    <meta property="og:title" content="Lattica — Prediction Markets at 10X" />
+    <meta
+      property="og:description"
+      content="Leverage, borrowing, and lending for prediction markets. Trade the markets you want with the capital you need."
+    />
+    <meta property="og:url" content="https://lattica.finance/" />
+    <meta property="og:image" content="https://lattica.finance/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Lattica — prediction markets at 10X"
+    />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@LatticaFinance" />
+    <meta name="twitter:creator" content="@LatticaFinance" />
+    <meta name="twitter:title" content="Lattica — Prediction Markets at 10X" />
+    <meta
+      name="twitter:description"
+      content="Leverage, borrowing, and lending for prediction markets. Trade the markets you want with the capital you need."
+    />
+    <meta name="twitter:image" content="https://lattica.finance/og-image.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Lattica",
+        "url": "https://lattica.finance/",
+        "logo": "https://lattica.finance/apple-touch-icon.png",
+        "description": "Leverage, borrowing, and lending for prediction markets.",
+        "sameAs": ["https://x.com/LatticaFinance"]
+      }
+    </script>
+
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -94,6 +143,7 @@
         <button class="nav-text-btn" id="home-btn">Home</button>
         <button class="nav-text-btn" id="whitepapers-btn">Whitepapers</button>
         <button class="nav-text-btn" id="waitlist-btn">Waitlist</button>
+        <button class="nav-text-btn" id="careers-btn">Careers</button>
         <a
           class="nav-x-link"
           id="nav-x-link"
@@ -156,6 +206,9 @@
       </button>
       <button class="mobile-menu-item" data-view="waitlist" type="button">
         Waitlist
+      </button>
+      <button class="mobile-menu-item" data-view="careers" type="button">
+        Careers
       </button>
       <a
         class="mobile-menu-x"
@@ -223,6 +276,14 @@
         </form>
         <div class="waitlist-status" id="waitlist-status"></div>
         <button class="back-hint" id="waitlist-back" type="button">
+          ← Back
+        </button>
+      </div>
+      <div class="careers-view" id="careers-view">
+        <div class="careers-eyebrow" id="careers-eyebrow">JOIN THE TEAM</div>
+        <h2 class="careers-title-h2" id="careers-title"></h2>
+        <div class="careers-message" id="careers-message">Check back soon.</div>
+        <button class="back-hint" id="careers-back" type="button">
           ← Back
         </button>
       </div>

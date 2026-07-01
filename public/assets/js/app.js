@@ -204,29 +204,46 @@
   const waitlistStatus = document.getElementById("waitlist-status");
   const waitlistBack = document.getElementById("waitlist-back");
   const WAITLIST_TITLE = "Join the waitlist";
+  const WAITLIST_EYEBROW = "EARLY ACCESS";
+  const careersView = document.getElementById("careers-view");
+  const careersBtn = document.getElementById("careers-btn");
+  const careersEyebrow = document.getElementById("careers-eyebrow");
+  const careersTitle = document.getElementById("careers-title");
+  const careersMessage = document.getElementById("careers-message");
+  const careersBack = document.getElementById("careers-back");
+  const CAREERS_TITLE = "Careers";
+  const CAREERS_EYEBROW = "JOIN THE TEAM";
   let currentView = "home";
   let animating = false;
   let waitlistSubmitted = false;
-  const HASH_FOR_VIEW = {
-    home: "",
-    whitepapers: "#whitepapers",
-    waitlist: "#waitlist",
+  const PATH_FOR_VIEW = {
+    home: "/",
+    whitepapers: "/whitepapers",
+    waitlist: "/waitlist",
+    careers: "/careers",
   };
-  const VIEW_FOR_HASH = {
-    "": "home",
-    "#whitepapers": "whitepapers",
-    "#waitlist": "waitlist",
-    "#how-it-works": "home",
+  const VIEW_FOR_PATH = {
+    "/": "home",
+    "/whitepapers": "whitepapers",
+    "/waitlist": "waitlist",
+    "/careers": "careers",
   };
-  function updateHash(view) {
-    const newHash = HASH_FOR_VIEW[view] || "";
-    if (window.location.hash !== newHash) {
-      history.replaceState(null, "", newHash || window.location.pathname);
+  function viewForPath(pathname) {
+    let p = pathname;
+    if (p.length > 1 && p.endsWith("/")) p = p.slice(0, -1);
+    return VIEW_FOR_PATH[p] || "home";
+  }
+  function updatePath(view, push) {
+    const newPath = PATH_FOR_VIEW[view] || "/";
+    if (window.location.pathname !== newPath) {
+      if (push) history.pushState({ view }, "", newPath);
+      else history.replaceState({ view }, "", newPath);
     }
   }
   function updateActiveBtn(view) {
     wpBtn.classList.toggle("active", view === "whitepapers");
     waitlistBtn.classList.toggle("active", view === "waitlist");
+    careersBtn.classList.toggle("active", view === "careers");
     homeBtn.classList.toggle("active", view === "home");
     document.querySelectorAll(".mobile-menu-item").forEach((b) => {
       b.classList.toggle("active", b.dataset.view === view);
@@ -243,6 +260,7 @@
       });
       await scrambleHeroTwoTone(heroH1, HERO_LINE1, HERO_LINE2, 450, "out");
       heroH1.style.display = "none";
+      heroSub.style.display = "none";
       heroCta.style.display = "none";
     } else if (view === "whitepapers") {
       anime({
@@ -258,13 +276,28 @@
       papersView.classList.remove("visible");
     } else if (view === "waitlist") {
       anime({
-        targets: [waitlistEyebrow, waitlistForm, waitlistStatus, waitlistBack],
+        targets: [waitlistForm, waitlistStatus, waitlistBack],
         opacity: 0,
         duration: 200,
         easing: "easeOutCubic",
       });
-      await scrambleText(waitlistTitle, WAITLIST_TITLE, 350, "out");
+      await Promise.all([
+        scrambleText(waitlistEyebrow, WAITLIST_EYEBROW, 300, "out"),
+        scrambleText(waitlistTitle, WAITLIST_TITLE, 350, "out"),
+      ]);
       waitlistView.classList.remove("visible");
+    } else if (view === "careers") {
+      anime({
+        targets: [careersMessage, careersBack],
+        opacity: 0,
+        duration: 200,
+        easing: "easeOutCubic",
+      });
+      await Promise.all([
+        scrambleText(careersEyebrow, CAREERS_EYEBROW, 300, "out"),
+        scrambleText(careersTitle, CAREERS_TITLE, 350, "out"),
+      ]);
+      careersView.classList.remove("visible");
     }
   }
   async function enterView(view) {
@@ -331,12 +364,14 @@
         waitlistStatus.textContent = "You're on the list. We'll be in touch.";
         waitlistStatus.classList.add("visible", "success");
       }
+      waitlistEyebrow.textContent = "";
       anime({
         targets: waitlistEyebrow,
         opacity: [0, 1],
         duration: 350,
         easing: "easeOutCubic",
       });
+      scrambleText(waitlistEyebrow, WAITLIST_EYEBROW, 450, "in");
       await scrambleText(waitlistTitle, WAITLIST_TITLE, 550, "in");
       anime({
         targets: waitlistForm,
@@ -348,6 +383,33 @@
       });
       anime({
         targets: waitlistBack,
+        opacity: [0, 1],
+        duration: 400,
+        delay: 250,
+        easing: "easeOutCubic",
+      });
+    } else if (view === "careers") {
+      careersTitle.textContent = "";
+      careersEyebrow.textContent = "";
+      careersView.classList.add("visible");
+      anime({
+        targets: careersEyebrow,
+        opacity: [0, 1],
+        duration: 350,
+        easing: "easeOutCubic",
+      });
+      scrambleText(careersEyebrow, CAREERS_EYEBROW, 450, "in");
+      await scrambleText(careersTitle, CAREERS_TITLE, 550, "in");
+      anime({
+        targets: careersMessage,
+        opacity: [0, 1],
+        translateY: [6, 0],
+        duration: 500,
+        delay: 120,
+        easing: "easeOutCubic",
+      });
+      anime({
+        targets: careersBack,
         opacity: [0, 1],
         duration: 400,
         delay: 250,
@@ -367,7 +429,7 @@
     }
     animating = true;
     updateActiveBtn(newView);
-    updateHash(newView);
+    updatePath(newView, opts.push !== false);
     if (!opts.skipExit) {
       await exitView(currentView);
     }
@@ -382,6 +444,10 @@
   waitlistBtn.addEventListener("click", (e) => {
     e.preventDefault();
     setView(currentView === "waitlist" ? "home" : "waitlist");
+  });
+  careersBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    setView(currentView === "careers" ? "home" : "careers");
   });
   homeBtn.addEventListener("click", (e) => {
     e.preventDefault();
@@ -415,6 +481,9 @@
   });
   waitlistBack.addEventListener("click", () => {
     if (currentView === "waitlist") setView("home");
+  });
+  careersBack.addEventListener("click", () => {
+    if (currentView === "careers") setView("home");
   });
   function updateNavScrolled() {
     if (window.scrollY > 24) navEl.classList.add("scrolled");
@@ -506,9 +575,9 @@
   mq.addEventListener("change", (e) => {
     if (e.matches && isMenuOpen()) closeMenu();
   });
-  window.addEventListener("hashchange", () => {
-    const wantView = VIEW_FOR_HASH[window.location.hash] || "home";
-    if (wantView !== currentView) setView(wantView);
+  window.addEventListener("popstate", () => {
+    const wantView = viewForPath(window.location.pathname);
+    if (wantView !== currentView) setView(wantView, { push: false });
   });
   let turnstileWidgetId = null;
   let turnstilePending = null;
@@ -657,7 +726,7 @@
       setWaitlistStatus(msg, "error");
     }
   });
-  const startView = VIEW_FOR_HASH[window.location.hash] || "home";
+  const startView = viewForPath(window.location.pathname);
   setTimeout(() => {
     if (startView === "home") {
       updateActiveBtn("home");
@@ -678,7 +747,7 @@
       currentView = "home";
       document.body.classList.add("modal-view");
       updateActiveBtn(startView);
-      updateHash(startView);
+      updatePath(startView, false);
       heroH1.style.display = "none";
       heroCta.style.display = "none";
       heroSub.style.display = "none";

@@ -43,6 +43,7 @@ canvas#lattice {
   width: 100%;
   height: 100%;
   z-index: 0;
+  opacity: 0.6;
 }
 .vignette {
   position: fixed;
@@ -97,7 +98,7 @@ nav.scrolled {
 }
 .logo span {
   font-family: var(--font-primary);
-  font-size: 17px;
+  font-size: 21px;
   font-weight: 400;
   letter-spacing: -0.03em;
   color: var(--white);
@@ -1233,6 +1234,44 @@ nav.scrolled {
 }
 .waitlist-status.success {
   color: rgba(190, 230, 200, 0.75);
+}
+.careers-view {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 520px;
+}
+.careers-view.visible {
+  display: flex;
+}
+.careers-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--silver-dim);
+  text-transform: uppercase;
+  opacity: 0;
+  margin-bottom: 6px;
+}
+.careers-title-h2 {
+  font-family: var(--font-primary);
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  color: var(--white);
+  line-height: 1.15;
+  text-align: center;
+}
+.careers-message {
+  font-family: var(--font-primary);
+  font-size: clamp(16px, 2.2vw, 20px);
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  color: var(--silver);
+  text-align: center;
+  opacity: 0;
 }
 #turnstile-container {
   position: fixed;

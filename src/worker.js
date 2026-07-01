@@ -172,31 +172,131 @@ async function handleWaitlist(request, env) {
   }
 }
 
+// Canonical production origin, used for canonical + og:url regardless of
+// whether the request arrived via the apex or www host.
+const SITE_ORIGIN = "https://lattica.finance";
+
+// Client-routed views that map to a real URL. The Worker serves index.html
+// for each and rewrites its <head> so every route is a distinct, crawlable
+// document with its own title/description/OG (JS-less scrapers included).
+const ROUTES = {
+  "/": {
+    title: "Lattica",
+    description: "Trade the markets you want with the capital you need.",
+    ogTitle: "Lattica — Prediction Markets at 10X",
+    ogDescription:
+      "Leverage, borrowing, and lending for prediction markets. Trade the markets you want with the capital you need.",
+  },
+  "/whitepapers": {
+    title: "Whitepapers — Lattica",
+    description:
+      "Research from Lattica: unlocking liquidity on prediction markets, and an introduction to the protocol.",
+    ogTitle: "Whitepapers — Lattica",
+    ogDescription:
+      "Research from Lattica on bringing liquidity and leverage to prediction markets.",
+  },
+  "/waitlist": {
+    title: "Join the Waitlist — Lattica",
+    description:
+      "Get early access to Lattica — leverage, borrowing, and lending for prediction markets.",
+    ogTitle: "Join the Waitlist — Lattica",
+    ogDescription:
+      "Get early access to Lattica — leverage, borrowing, and lending for prediction markets.",
+  },
+  "/careers": {
+    title: "Careers — Lattica",
+    description: "Careers at Lattica. Check back soon.",
+    ogTitle: "Careers — Lattica",
+    ogDescription: "Careers at Lattica. Check back soon.",
+  },
+};
+
+function normalizePath(pathname) {
+  if (pathname.length > 1 && pathname.endsWith("/")) {
+    return pathname.slice(0, -1);
+  }
+  return pathname;
+}
+
+// Injects the Turnstile site key into any HTML, plus per-route <head>
+// metadata when `meta`/`canonical` are supplied.
+function injectHtml(response, env, meta, canonical) {
+  let rw = new HTMLRewriter().on('meta[name="turnstile-site-key"]', {
+    element(el) {
+      if (env.TURNSTILE_SITE_KEY) {
+        el.setAttribute("content", env.TURNSTILE_SITE_KEY);
+      }
+    },
+  });
+  if (meta) {
+    rw = rw
+      .on("title", {
+        element(el) {
+          el.setInnerContent(meta.title);
+        },
+      })
+      .on('meta[name="description"]', {
+        element(el) {
+          el.setAttribute("content", meta.description);
+        },
+      })
+      .on('link[rel="canonical"]', {
+        element(el) {
+          el.setAttribute("href", canonical);
+        },
+      })
+      .on('meta[property="og:title"]', {
+        element(el) {
+          el.setAttribute("content", meta.ogTitle);
+        },
+      })
+      .on('meta[property="og:description"]', {
+        element(el) {
+          el.setAttribute("content", meta.ogDescription);
+        },
+      })
+      .on('meta[property="og:url"]', {
+        element(el) {
+          el.setAttribute("content", canonical);
+        },
+      })
+      .on('meta[name="twitter:title"]', {
+        element(el) {
+          el.setAttribute("content", meta.ogTitle);
+        },
+      })
+      .on('meta[name="twitter:description"]', {
+        element(el) {
+          el.setAttribute("content", meta.ogDescription);
+        },
+      });
+  }
+  return rw.transform(response);
+}
+
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/waitlist") {
       return handleWaitlist(request, env);
     }
 
-    // Everything else: serve from /public via the assets binding.
-    const response = await env.ASSETS.fetch(request);
-
-    // For HTML responses, inject the Turnstile site key from env so
-    // the key never lives in source. Streams through HTMLRewriter
-    // with zero parsing overhead on non-HTML assets.
-    const ct = response.headers.get("content-type") || "";
-    if (env.TURNSTILE_SITE_KEY && ct.includes("text/html")) {
-      return new HTMLRewriter()
-        .on('meta[name="turnstile-site-key"]', {
-          element(el) {
-            el.setAttribute("content", env.TURNSTILE_SITE_KEY);
-          },
-        })
-        .transform(response);
+    // Client-routed SPA paths: serve index.html with per-route metadata.
+    const path = normalizePath(url.pathname);
+    const meta = ROUTES[path];
+    if (meta) {
+      const canonical = SITE_ORIGIN + (path === "/" ? "/" : path);
+      const index = await env.ASSETS.fetch(new URL("/index.html", url.origin));
+      return injectHtml(index, env, meta, canonical);
     }
 
+    // Everything else: static asset from /public via the assets binding.
+    const response = await env.ASSETS.fetch(request);
+    const ct = response.headers.get("content-type") || "";
+    if (env.TURNSTILE_SITE_KEY && ct.includes("text/html")) {
+      return injectHtml(response, env, null, null);
+    }
     return response;
   },
 };
