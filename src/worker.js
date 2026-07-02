@@ -182,7 +182,8 @@ const SITE_ORIGIN = "https://lattica.finance";
 const ROUTES = {
   "/": {
     title: "Lattica",
-    description: "Trade the markets you want with the capital you need.",
+    description:
+      "Lattica brings leverage, borrowing, and lending to prediction markets — trade the markets you want with the capital you need.",
     ogTitle: "Lattica — Prediction Markets at 10X",
     ogDescription:
       "Leverage, borrowing, and lending for prediction markets. Trade the markets you want with the capital you need.",
