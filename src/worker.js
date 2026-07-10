@@ -183,32 +183,30 @@ const ROUTES = {
   "/": {
     title: "Lattica",
     description:
-      "Lattica brings leverage, borrowing, and lending to prediction markets — trade the markets you want with the capital you need.",
+      "Prediction markets at 10x. Trade the markets you want with the capital you need.",
     ogTitle: "Lattica — Prediction Markets at 10X",
     ogDescription:
       "Leverage, borrowing, and lending for prediction markets. Trade the markets you want with the capital you need.",
   },
   "/whitepapers": {
-    title: "Whitepapers — Lattica",
-    description:
-      "Research from Lattica: unlocking liquidity on prediction markets, and an introduction to the protocol.",
-    ogTitle: "Whitepapers — Lattica",
-    ogDescription:
-      "Research from Lattica on bringing liquidity and leverage to prediction markets.",
+    title: "Whitepapers",
+    description: "Unlocking liquidity on prediction markets.",
+    ogTitle: "Lattica — Whitepapers",
+    ogDescription: "Unlocking liquidity on prediction markets.",
   },
   "/waitlist": {
-    title: "Join the Waitlist — Lattica",
+    title: "Join the Waitlist",
     description:
-      "Get early access to Lattica — leverage, borrowing, and lending for prediction markets.",
-    ogTitle: "Join the Waitlist — Lattica",
+      "Get early access to leverage, borrowing, and lending for prediction markets.",
+    ogTitle: "Lattica — Join the Waitlist",
     ogDescription:
-      "Get early access to Lattica — leverage, borrowing, and lending for prediction markets.",
+      "Get early access to leverage, borrowing, and lending for prediction markets.",
   },
   "/careers": {
-    title: "Careers — Lattica",
-    description: "Careers at Lattica. Check back soon.",
-    ogTitle: "Careers — Lattica",
-    ogDescription: "Careers at Lattica. Check back soon.",
+    title: "Careers",
+    description: "Careers at Lattica.",
+    ogTitle: "Lattica — Careers",
+    ogDescription: "Careers at Lattica.",
   },
 };
 
