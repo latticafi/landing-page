@@ -12,7 +12,7 @@
     "db:create": "wrangler d1 create lattica_waitlist",
     "db:schema": "wrangler d1 migrations apply lattica_waitlist --remote",
     "db:schema:local": "wrangler d1 migrations apply lattica_waitlist --local",
-    "db:list": "wrangler d1 execute lattica_waitlist --remote --command \"SELECT email, datetime(created_at,'unixepoch') AS at FROM waitlist ORDER BY created_at DESC LIMIT 50\"",
+    "db:list": "wrangler d1 execute lattica_waitlist --remote --command \"SELECT email, datetime(created_at,'unixepoch') AS at FROM waitlist ORDER BY created_at DESC\"",
     "db:list:local": "wrangler d1 execute lattica_waitlist --local --command \"SELECT email, datetime(created_at,'unixepoch') AS at FROM waitlist ORDER BY created_at DESC LIMIT 50\"",
     "db:count": "wrangler d1 execute lattica_waitlist --remote --command \"SELECT COUNT(*) AS n FROM waitlist\"",
     "db:count:local": "wrangler d1 execute lattica_waitlist --local --command \"SELECT COUNT(*) AS n FROM waitlist\"",
