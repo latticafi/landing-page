@@ -115,8 +115,8 @@
   const heroH1 = document.getElementById("hero-h1");
   const heroSub = document.getElementById("hero-sub");
   const heroCta = document.getElementById("hero-cta");
-  const HERO_LINE1 = "Prediction Markets";
-  const HERO_LINE2 = "at 10X";
+  const HERO_LINE1 = heroH1.dataset.line1 || "Prediction Markets";
+  const HERO_LINE2 = heroH1.dataset.line2 || "at 10X";
   heroH1.textContent = "";
   let resizeReady = false;
   const navEl = document.querySelector("nav");
@@ -194,8 +194,9 @@
   const paperNum2 = document.getElementById("paper-num-2");
   const paperDivider = document.getElementById("paper-divider");
   const papersBack = document.getElementById("papers-back");
-  const PAPER_1_TEXT = "Unlocking Liquidity on Prediction Markets";
-  const PAPER_2_TEXT = "Introducing Lattica";
+  const PAPER_1_TEXT =
+    paperTitle1.dataset.text || "Unlocking Liquidity on Prediction Markets";
+  const PAPER_2_TEXT = paperTitle2.dataset.text || "Introducing Lattica";
   const waitlistEyebrow = document.getElementById("waitlist-eyebrow");
   const waitlistTitle = document.getElementById("waitlist-title");
   const waitlistForm = document.getElementById("waitlist-form");

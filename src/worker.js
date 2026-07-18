@@ -177,22 +177,26 @@ async function handleWaitlist(request, env) {
 const SITE_ORIGIN = "https://lattica.finance";
 
 // Client-routed views that map to a real URL. The Worker serves index.html
-// for each and rewrites its <head> so every route is a distinct, crawlable
-// document with its own title/description/OG (JS-less scrapers included).
+// for each and rewrites its <head> so every route gets its own
+// title/description/OG (JS-less scrapers included). The sub-routes share the
+// home page's body, so they canonical to "/" — they're states of the home
+// page, not separate indexable documents.
 const ROUTES = {
   "/": {
-    title: "Lattica",
+    title: "Lattica — Leverage, Borrowing & Lending for Prediction Markets",
     description:
       "Prediction markets at 10x. Trade the markets you want with the capital you need.",
     ogTitle: "Lattica — Prediction Markets at 10X",
     ogDescription:
       "Leverage, borrowing, and lending for prediction markets. Trade the markets you want with the capital you need.",
+    canonical: "/",
   },
   "/whitepapers": {
     title: "Whitepapers",
     description: "Unlocking liquidity on prediction markets.",
     ogTitle: "Lattica — Whitepapers",
     ogDescription: "Unlocking liquidity on prediction markets.",
+    canonical: "/",
   },
   "/waitlist": {
     title: "Join the Waitlist",
@@ -201,12 +205,14 @@ const ROUTES = {
     ogTitle: "Lattica — Join the Waitlist",
     ogDescription:
       "Get early access to leverage, borrowing, and lending for prediction markets.",
+    canonical: "/",
   },
   "/careers": {
     title: "Careers",
     description: "Careers at Lattica.",
     ogTitle: "Lattica — Careers",
     ogDescription: "Careers at Lattica.",
+    canonical: "/",
   },
 };
 
@@ -285,7 +291,7 @@ export default {
     const path = normalizePath(url.pathname);
     const meta = ROUTES[path];
     if (meta) {
-      const canonical = SITE_ORIGIN + (path === "/" ? "/" : path);
+      const canonical = SITE_ORIGIN + (meta.canonical ?? (path === "/" ? "/" : path));
       const index = await env.ASSETS.fetch(new URL("/index.html", url.origin));
       return injectHtml(index, env, meta, canonical);
     }
