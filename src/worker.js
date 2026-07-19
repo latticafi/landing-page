@@ -302,7 +302,7 @@ const ROUTES = {
   "/": {
     title: "Lattica — Leverage, Borrowing & Lending for Prediction Markets",
     description:
-      "Prediction markets at 10x. Trade the markets you want with the capital you need.",
+      "Lattica brings leverage, borrowing, and lending to prediction markets — trade the outcomes you want at up to 10x with the capital you need.",
     ogTitle: "Lattica — Prediction Markets at 10X",
     ogDescription:
       "Leverage, borrowing, and lending for prediction markets. Trade the markets you want with the capital you need.",
