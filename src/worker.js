@@ -20,62 +20,127 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAIL_LEN = 254;
 const MAX_BODY_BYTES = 2048;
+
 const TURNSTILE_VERIFY_URL =
   "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+    },
   });
 }
 
 function checkOrigin(request, env) {
   const allowed = (env.ALLOWED_ORIGINS || "")
     .split(",")
-    .map((s) => s.trim())
+    .map((origin) => origin.trim())
     .filter(Boolean);
-  if (!allowed.length) return true; // disabled if not configured
+
+  // Origin checking is disabled when no allowlist is configured.
+  if (!allowed.length) return true;
+
   const origin = request.headers.get("Origin");
-  return !!origin && allowed.includes(origin);
+
+  return Boolean(origin && allowed.includes(origin));
 }
 
 async function verifyTurnstile(token, ip, secret) {
-  if (!token || !secret) return false;
+  if (!token || !secret) {
+    return {
+      success: false,
+      "error-codes": ["missing-input"],
+    };
+  }
+
   const form = new FormData();
   form.append("secret", secret);
   form.append("response", token);
-  if (ip) form.append("remoteip", ip);
+
+  if (ip) {
+    form.append("remoteip", ip);
+  }
+
   try {
     const res = await fetch(TURNSTILE_VERIFY_URL, {
       method: "POST",
       body: form,
     });
-    if (!res.ok) return false;
-    const data = await res.json();
-    return data.success === true;
+
+    let data;
+
+    try {
+      data = await res.json();
+    } catch (err) {
+      console.error("turnstile: invalid Siteverify response:", {
+        httpStatus: res.status,
+        error: String(err),
+      });
+
+      return {
+        success: false,
+        "error-codes": ["invalid-siteverify-response"],
+        httpStatus: res.status,
+      };
+    }
+
+    // Do not log the secret, raw token, email, or full IP address.
+    console.log(
+      "turnstile siteverify:",
+      JSON.stringify({
+        success: data.success === true,
+        errorCodes: data["error-codes"] || [],
+        hostname: data.hostname || null,
+        action: data.action || null,
+        cdata: data.cdata || null,
+        challengeTs: data.challenge_ts || null,
+        httpStatus: res.status,
+      }),
+    );
+
+    if (!res.ok) {
+      return {
+        ...data,
+        success: false,
+        httpStatus: res.status,
+      };
+    }
+
+    return data;
   } catch (err) {
-    console.error("turnstile verify error:", err);
-    return false;
+    console.error("turnstile verify request failed:", err);
+
+    return {
+      success: false,
+      "error-codes": ["siteverify-request-failed"],
+    };
   }
 }
 
 async function hmacIP(ip, salt) {
   if (!ip || !salt) return null;
+
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(salt),
-    { name: "HMAC", hash: "SHA-256" },
+    {
+      name: "HMAC",
+      hash: "SHA-256",
+    },
     false,
     ["sign"],
   );
-  const sig = await crypto.subtle.sign(
+
+  const signature = await crypto.subtle.sign(
     "HMAC",
     key,
     new TextEncoder().encode(ip),
   );
-  return Array.from(new Uint8Array(sig))
-    .map((b) => b.toString(16).padStart(2, "0"))
+
+  return Array.from(new Uint8Array(signature))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 }
 
@@ -87,75 +152,129 @@ async function handleWaitlist(request, env) {
 
   // 2. Origin
   if (!checkOrigin(request, env)) {
+    console.warn(
+      "waitlist: forbidden origin",
+      JSON.stringify({
+        origin: request.headers.get("Origin"),
+      }),
+    );
+
     return json({ error: "forbidden_origin" }, 403);
   }
 
-  // 3. Body size guard (cheap reject before parsing)
-  const lenHeader = request.headers.get("Content-Length");
-  if (lenHeader && Number(lenHeader) > MAX_BODY_BYTES) {
+  // 3. Body size guard
+  const contentLength = request.headers.get("Content-Length");
+
+  if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
     return json({ error: "body_too_large" }, 413);
   }
 
-  // 4. JSON parse
+  // 4. Parse JSON
   let body;
+
   try {
     body = await request.json();
   } catch {
     return json({ error: "invalid_json" }, 400);
   }
 
-  // 5. Email
+  // 5. Validate email
   const email = String(body?.email ?? "")
     .trim()
     .toLowerCase();
+
   if (!email || email.length > MAX_EMAIL_LEN || !EMAIL_RE.test(email)) {
     return json({ error: "invalid_email" }, 400);
   }
 
-  // 6. Raw IP (used for rate-limit key + Turnstile siteverify; never persisted)
+  // 6. Raw IP
+  // Used for rate limiting and Turnstile verification, but never persisted.
   const rawIP =
     request.headers.get("CF-Connecting-IP") ||
     request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ||
     null;
 
-  // 7. Rate limit (per-IP per minute, scoped to one CF location)
+  // 7. Rate limit
   if (env.WAITLIST_LIMITER) {
     const { success } = await env.WAITLIST_LIMITER.limit({
       key: rawIP || "anonymous",
     });
-    if (!success) return json({ error: "rate_limited" }, 429);
+
+    if (!success) {
+      console.warn("waitlist: rate limited");
+
+      return json({ error: "rate_limited" }, 429);
+    }
   }
 
   // 8. Turnstile
   if (!env.TURNSTILE_SECRET) {
     console.error("waitlist: TURNSTILE_SECRET not configured");
+
     return json({ error: "not_configured" }, 500);
   }
+
   const turnstileToken = String(body?.turnstileToken ?? "");
+
   if (!turnstileToken) {
-    return json({ error: "missing_turnstile_token" }, 400);
+    console.warn("waitlist: missing Turnstile token");
+
+    return json(
+      {
+        error: "missing_turnstile_token",
+      },
+      400,
+    );
   }
-  const verified = await verifyTurnstile(
+
+  const verification = await verifyTurnstile(
     turnstileToken,
     rawIP,
     env.TURNSTILE_SECRET,
   );
-  if (!verified) return json({ error: "turnstile_failed" }, 403);
+
+  if (verification.success !== true) {
+    console.warn(
+      "waitlist: Turnstile rejected submission",
+      JSON.stringify({
+        errorCodes: verification["error-codes"] || [],
+        hostname: verification.hostname || null,
+        action: verification.action || null,
+        challengeTs: verification.challenge_ts || null,
+        httpStatus: verification.httpStatus || null,
+      }),
+    );
+
+    return json(
+      {
+        error: "turnstile_failed",
+
+        // Useful while diagnosing the problem.
+        // You can remove this field later if you do not want clients to see it.
+        codes: verification["error-codes"] || [],
+      },
+      403,
+    );
+  }
 
   // 9. Hash IP for storage
   if (!env.IP_SALT) {
     console.error("waitlist: IP_SALT not configured");
+
     return json({ error: "not_configured" }, 500);
   }
+
   const ipHash = await hmacIP(rawIP, env.IP_SALT);
 
-  // 10. DB insert
+  // 10. Insert into D1
   if (!env.DB) {
     console.error("waitlist: D1 binding 'DB' not configured");
+
     return json({ error: "not_configured" }, 500);
   }
-  const ua = request.headers.get("User-Agent") || null;
-  const ref = request.headers.get("Referer") || null;
+
+  const userAgent = request.headers.get("User-Agent") || null;
+  const referrer = request.headers.get("Referer") || null;
 
   try {
     await env.DB.prepare(
@@ -163,24 +282,22 @@ async function handleWaitlist(request, env) {
        VALUES (?, ?, ?, ?)
        ON CONFLICT (email) DO NOTHING`,
     )
-      .bind(email, ipHash, ua, ref)
+      .bind(email, ipHash, userAgent, referrer)
       .run();
+
     return json({ ok: true });
   } catch (err) {
     console.error("waitlist insert failed:", err);
+
     return json({ error: "db_error" }, 500);
   }
 }
 
 // Canonical production origin, used for canonical + og:url regardless of
-// whether the request arrived via the apex or www host.
+// whether the request arrived through the apex or www hostname.
 const SITE_ORIGIN = "https://lattica.finance";
 
-// Client-routed views that map to a real URL. The Worker serves index.html
-// for each and rewrites its <head> so every route gets its own
-// title/description/OG (JS-less scrapers included). The sub-routes share the
-// home page's body, so they canonical to "/" — they're states of the home
-// page, not separate indexable documents.
+// Client-routed views that map to real URLs.
 const ROUTES = {
   "/": {
     title: "Lattica — Leverage, Borrowing & Lending for Prediction Markets",
@@ -191,6 +308,7 @@ const ROUTES = {
       "Leverage, borrowing, and lending for prediction markets. Trade the markets you want with the capital you need.",
     canonical: "/",
   },
+
   "/whitepapers": {
     title: "Whitepapers",
     description: "Unlocking liquidity on prediction markets.",
@@ -198,6 +316,7 @@ const ROUTES = {
     ogDescription: "Unlocking liquidity on prediction markets.",
     canonical: "/",
   },
+
   "/waitlist": {
     title: "Join the Waitlist",
     description:
@@ -207,6 +326,7 @@ const ROUTES = {
       "Get early access to leverage, borrowing, and lending for prediction markets.",
     canonical: "/",
   },
+
   "/careers": {
     title: "Careers",
     description: "Careers at Lattica.",
@@ -220,63 +340,65 @@ function normalizePath(pathname) {
   if (pathname.length > 1 && pathname.endsWith("/")) {
     return pathname.slice(0, -1);
   }
+
   return pathname;
 }
 
-// Injects the Turnstile site key into any HTML, plus per-route <head>
-// metadata when `meta`/`canonical` are supplied.
+// Inject the Turnstile site key into HTML, along with route metadata.
 function injectHtml(response, env, meta, canonical) {
-  let rw = new HTMLRewriter().on('meta[name="turnstile-site-key"]', {
-    element(el) {
+  let rewriter = new HTMLRewriter().on('meta[name="turnstile-site-key"]', {
+    element(element) {
       if (env.TURNSTILE_SITE_KEY) {
-        el.setAttribute("content", env.TURNSTILE_SITE_KEY);
+        element.setAttribute("content", env.TURNSTILE_SITE_KEY);
       }
     },
   });
+
   if (meta) {
-    rw = rw
+    rewriter = rewriter
       .on("title", {
-        element(el) {
-          el.setInnerContent(meta.title);
+        element(element) {
+          element.setInnerContent(meta.title);
         },
       })
       .on('meta[name="description"]', {
-        element(el) {
-          el.setAttribute("content", meta.description);
+        element(element) {
+          element.setAttribute("content", meta.description);
         },
       })
       .on('link[rel="canonical"]', {
-        element(el) {
-          el.setAttribute("href", canonical);
+        element(element) {
+          element.setAttribute("href", canonical);
         },
       })
       .on('meta[property="og:title"]', {
-        element(el) {
-          el.setAttribute("content", meta.ogTitle);
+        element(element) {
+          element.setAttribute("content", meta.ogTitle);
         },
       })
       .on('meta[property="og:description"]', {
-        element(el) {
-          el.setAttribute("content", meta.ogDescription);
+        element(element) {
+          element.setAttribute("content", meta.ogDescription);
         },
       })
       .on('meta[property="og:url"]', {
-        element(el) {
-          el.setAttribute("content", canonical);
+        element(element) {
+          element.setAttribute("content", canonical);
         },
       })
       .on('meta[name="twitter:title"]', {
-        element(el) {
-          el.setAttribute("content", meta.ogTitle);
+        element(element) {
+          element.setAttribute("content", meta.ogTitle);
         },
       })
       .on('meta[name="twitter:description"]', {
-        element(el) {
-          el.setAttribute("content", meta.ogDescription);
+        element(element) {
+          element.setAttribute("content", meta.ogDescription);
         },
       });
   }
-  return rw.transform(response);
+
+  return rewriter.transform(response);
 }
 
 export default {
@@ -287,21 +409,27 @@ export default {
       return handleWaitlist(request, env);
     }
 
-    // Client-routed SPA paths: serve index.html with per-route metadata.
+    // Client-routed SPA paths
     const path = normalizePath(url.pathname);
     const meta = ROUTES[path];
+
     if (meta) {
-      const canonical = SITE_ORIGIN + (meta.canonical ?? (path === "/" ? "/" : path));
+      const canonical =
+        SITE_ORIGIN + (meta.canonical ?? (path === "/" ? "/" : path));
+
       const index = await env.ASSETS.fetch(new URL("/index.html", url.origin));
+
       return injectHtml(index, env, meta, canonical);
     }
 
-    // Everything else: static asset from /public via the assets binding.
+    // Everything else: static asset from /public.
     const response = await env.ASSETS.fetch(request);
-    const ct = response.headers.get("content-type") || "";
-    if (env.TURNSTILE_SITE_KEY && ct.includes("text/html")) {
+    const contentType = response.headers.get("content-type") || "";
+
+    if (env.TURNSTILE_SITE_KEY && contentType.includes("text/html")) {
       return injectHtml(response, env, null, null);
     }
+
     return response;
   },
 };
