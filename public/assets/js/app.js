@@ -407,18 +407,18 @@
         duration: 350,
         easing: "easeOutCubic",
       });
-      scrambleText(careersEyebrow, CAREERS_EYEBROW, 450, "in");
-      await scrambleText(careersTitle, CAREERS_TITLE, 550, "in");
       anime({
         targets: roleDivider,
         opacity: [0, 1],
         duration: 400,
-        delay: 200,
+        delay: 400,
         easing: "easeOutCubic",
       });
+      scrambleText(careersEyebrow, CAREERS_EYEBROW, 450, "in");
       await Promise.all([
-        scrambleText(roleTitle1, ROLE_1_TEXT, 600, "in"),
-        scrambleText(roleTitle2, ROLE_2_TEXT, 600, "in"),
+        scrambleText(careersTitle, CAREERS_TITLE, 550, "in"),
+        scrambleText(roleTitle1, ROLE_1_TEXT, 900, "in"),
+        scrambleText(roleTitle2, ROLE_2_TEXT, 900, "in"),
       ]);
       anime({
         targets: careersBack,
