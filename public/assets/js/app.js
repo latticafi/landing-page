@@ -11,9 +11,6 @@
   }
   setTimeout(unlockScroll, 4000);
   const WAITLIST_ENDPOINT = "/api/waitlist";
-  const TURNSTILE_SITE_KEY =
-    document.querySelector('meta[name="turnstile-site-key"]')?.content ||
-    "1x00000000000000000000AA";
   // Canvas lattice background rendering lives in lattice-bg.js (shared
   // across pages). We reuse its `intro` state object to drive this page's
   // fade-in sequence, and its rebuild() on resize.
@@ -590,75 +587,6 @@
     const wantView = viewForPath(window.location.pathname);
     if (wantView !== currentView) setView(wantView, { push: false });
   });
-  let turnstileWidgetId = null;
-  let turnstilePending = null;
-  let turnstileReadyResolve = null;
-  const turnstileReady = new Promise((res) => {
-    turnstileReadyResolve = res;
-  });
-  function renderTurnstile() {
-    if (turnstileWidgetId !== null) return true;
-    if (!window.turnstile) return false;
-    try {
-      turnstileWidgetId = window.turnstile.render("#turnstile-container", {
-        sitekey: TURNSTILE_SITE_KEY,
-        execution: "execute",
-        appearance: "interaction-only",
-        callback: (token) => {
-          turnstilePending?.resolve(token);
-          turnstilePending = null;
-        },
-        "error-callback": () => {
-          turnstilePending?.reject(new Error("turnstile_error"));
-          turnstilePending = null;
-        },
-        "timeout-callback": () => {
-          turnstilePending?.reject(new Error("turnstile_timeout"));
-          turnstilePending = null;
-        },
-      });
-    } catch (err) {
-      console.error("turnstile render failed:", err);
-      return false;
-    }
-    if (turnstileWidgetId !== null) turnstileReadyResolve(true);
-    return turnstileWidgetId !== null;
-  }
-  if (window.turnstile) {
-    renderTurnstile();
-  } else {
-    let tries = 0;
-    const iv = setInterval(() => {
-      if (window.turnstile) {
-        clearInterval(iv);
-        renderTurnstile();
-      } else if (++tries > 80) {
-        clearInterval(iv);
-      }
-    }, 100);
-  }
-  function getTurnstileToken() {
-    return new Promise(async (resolve, reject) => {
-      const ready = await Promise.race([
-        turnstileReady,
-        new Promise((r) => setTimeout(() => r(false), 4000)),
-      ]);
-      if (!ready || turnstileWidgetId === null) {
-        reject(new Error("turnstile_not_loaded"));
-        return;
-      }
-      try {
-        window.turnstile.reset(turnstileWidgetId);
-      } catch (_) {}
-      turnstilePending = { resolve, reject };
-      try {
-        window.turnstile.execute(turnstileWidgetId);
-      } catch (err) {
-        turnstilePending = null;
-        reject(err);
-      }
-    });
-  }
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   function setWaitlistStatus(msg, kind) {
     waitlistStatus.textContent = msg;
@@ -666,7 +594,7 @@
     if (kind) waitlistStatus.classList.add(kind);
     waitlistStatus.classList.add("visible");
   }
-  async function submitWaitlist(email, turnstileToken) {
+  async function submitWaitlist(email) {
     if (!WAITLIST_ENDPOINT) {
       await new Promise((r) => setTimeout(r, 700));
       return { ok: true };
@@ -678,7 +606,7 @@
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({ email, turnstileToken }),
+        body: JSON.stringify({ email }),
       });
       let payload = null;
       try {
@@ -703,20 +631,7 @@
     waitlistSubmit.textContent = "Submitting";
     setWaitlistStatus("", null);
     waitlistStatus.classList.remove("visible");
-    let turnstileToken = "";
-    if (WAITLIST_ENDPOINT) {
-      try {
-        turnstileToken = await getTurnstileToken();
-      } catch (err) {
-        waitlistInput.disabled = false;
-        waitlistSubmit.disabled = false;
-        waitlistSubmit.textContent = "Join now";
-        setWaitlistStatus("Verification failed. Please try again.", "error");
-        return;
-      }
-    }
-    waitlistSubmit.textContent = "Submitting";
-    const result = await submitWaitlist(email, turnstileToken);
+    const result = await submitWaitlist(email);
     if (result.ok) {
       waitlistSubmitted = true;
       waitlistSubmit.textContent = "Submitted";
@@ -729,11 +644,9 @@
       const msg =
         errCode === "rate_limited"
           ? "Too many requests. Please slow down."
-          : errCode === "turnstile_failed"
-            ? "Verification failed. Please try again."
-            : errCode === "invalid_email"
-              ? "Please enter a valid email."
-              : "Something went wrong. Please try again.";
+          : errCode === "invalid_email"
+            ? "Please enter a valid email."
+            : "Something went wrong. Please try again.";
       setWaitlistStatus(msg, "error");
     }
   });

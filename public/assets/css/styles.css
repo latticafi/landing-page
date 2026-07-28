@@ -1277,15 +1277,6 @@ nav.scrolled {
 .careers-roles .paper-title {
   font-size: clamp(18px, 2.2vw, 24px);
 }
-#turnstile-container {
-  position: fixed;
-  left: -10000px;
-  top: -10000px;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  pointer-events: none;
-}
 .back-hint {
   font-family: var(--font-mono);
   font-size: 13px;
