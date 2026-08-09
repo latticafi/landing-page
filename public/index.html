@@ -177,6 +177,11 @@
         <span class="dim">Prediction Markets</span> at
         <span class="bold">10X</span>
       </h1>
+      <script>
+        // JS-only: clear the pre-rendered headline before first paint so it
+        // scrambles in cleanly. No-JS keeps the static <h1> above.
+        document.getElementById("hero-h1").textContent = "";
+      </script>
       <p class="hero-sub" id="hero-sub">
         Trade the markets you want with the capital you need
       </p>
@@ -238,7 +243,7 @@
       <div class="careers-view" id="careers-view">
         <div class="careers-eyebrow" id="careers-eyebrow">JOIN THE TEAM</div>
         <h2 class="careers-title-h2" id="careers-title"></h2>
-        <div class="careers-message" id="careers-message">Coming soon.</div>
+        <div class="careers-message" id="careers-message">Check back soon.</div>
         <button class="back-hint" id="careers-back" type="button">
           ← Back
         </button>
