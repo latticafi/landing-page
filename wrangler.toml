@@ -1,6 +1,7 @@
 name = "lattica-landing"
 main = "src/worker.js"
 compatibility_date = "2026-05-23"
+compatibility_flags = ["nodejs_compat"]
 
 routes = [
   { pattern = "lattica.finance", custom_domain = true },

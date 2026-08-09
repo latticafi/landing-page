@@ -6,6 +6,7 @@
   "description": "Lattica landing page on Cloudflare Workers + D1",
   "packageManager": "pnpm@11.3.0",
   "scripts": {
+    "test": "node --test",
     "dev": "wrangler dev",
     "dev:remote": "wrangler dev --remote",
     "deploy": "wrangler deploy",
@@ -22,6 +23,7 @@
     "db:backup": "wrangler d1 export lattica_waitlist --remote --output backups/waitlist-$(date +%F).sql"
   },
   "dependencies": {
+    "@sentry/cloudflare": "^10.69.0",
     "html-rewriter-wasm": "^0.4.1"
   },
   "devDependencies": {

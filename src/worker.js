@@ -1,4 +1,6 @@
 // src/worker.js — Cloudflare Worker
+import { withSentry } from "@sentry/cloudflare";
+
 //
 // Handles:
 //   POST /api/waitlist     → insert into D1 (after origin and rate-limit
@@ -12,9 +14,12 @@
 //
 // Secrets (`wrangler secret put`):
 //   - IP_SALT            : HMAC key used to hash IP addresses
+//   - SENTRY_DSN         : Sentry project DSN
 //
 // Vars (wrangler.toml):
 //   - ALLOWED_ORIGINS    : comma-separated list of allowed Origin headers
+//   - SENTRY_DEBUG_ENABLED: set to "true" outside production to enable the
+//                           Sentry verification route
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAIL_LEN = 254;
@@ -264,9 +269,16 @@ function injectHtml(response, meta, canonical) {
     .transform(response);
 }
 
-export default {
+export const worker = {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (
+      url.pathname === "/api/debug/sentry" &&
+      env.SENTRY_DEBUG_ENABLED === "true"
+    ) {
+      throw new Error("Sentry verification error");
+    }
 
     if (url.pathname === "/api/waitlist") {
       return handleWaitlist(request, env);
@@ -287,5 +299,24 @@ export default {
 
     // Everything else: static asset from /public.
     return env.ASSETS.fetch(request);
+  },
+};
+
+const sentryWorker = withSentry(
+  (env) => ({
+    dsn: env.SENTRY_DSN,
+    tracesSampleRate: 1.0,
+    enableLogs: true,
+  }),
+  { ...worker },
+);
+
+export function selectWorker(env) {
+  return env.SENTRY_DSN ? sentryWorker : worker;
+}
+
+export default {
+  fetch(request, env, ctx) {
+    return selectWorker(env).fetch(request, env, ctx);
   },
 };
