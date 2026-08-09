@@ -9,3 +9,6 @@ node_modules/
 .headroom
 .tokensave
 backups/
+
+# One-off seed files contain real user emails (PII) — never commit
+migrations/*seed*.sql

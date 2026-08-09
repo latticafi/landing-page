@@ -65,11 +65,8 @@ Papers are **externally hosted PDFs**, not in this repo:
 - Paper II — "Introducing Lattica" → `docs.lattica.finance/intro-lattica.pdf`
 
 ### Careers
-Open roles link out to **Dover** application forms. They reuse the whitepapers'
-`.paper-link`/`.paper-title`/`.paper-divider` styles (no `.paper-number`), wrapped
-in `.careers-roles` under the "JOIN THE TEAM" eyebrow + "Careers" heading:
-- Head of Growth → `app.dover.com/apply/Lattica/0c829c0b-…`
-- Founding Engineer → `app.dover.com/apply/Lattica/a119c7d6-…`
+No open roles listed. A single `.careers-message` ("Check back soon.") sits under the
+"JOIN THE TEAM" eyebrow + "Careers" heading.
 
 ## Waitlist API — `POST /api/waitlist` (`handleWaitlist` in worker.js)
 
