@@ -7,6 +7,10 @@ routes = [
   { pattern = "www.lattica.finance", custom_domain = true },
 ]
 
+# Enable versioned preview URLs (<version>-lattica-landing.<subdomain>.workers.dev)
+# so `pnpm deploy:preview` gives a testable URL without touching production.
+preview_urls = true
+
 # Serve everything under ./public as static assets,
 # and let the Worker fall through to them via env.ASSETS.fetch().
 [assets]
