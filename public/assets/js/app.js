@@ -207,10 +207,14 @@
   const careersBtn = document.getElementById("careers-btn");
   const careersEyebrow = document.getElementById("careers-eyebrow");
   const careersTitle = document.getElementById("careers-title");
-  const careersMessage = document.getElementById("careers-message");
   const careersBack = document.getElementById("careers-back");
+  const roleTitle1 = document.getElementById("role-title-1");
+  const roleTitle2 = document.getElementById("role-title-2");
+  const roleDivider = document.getElementById("role-divider");
   const CAREERS_TITLE = "Careers";
   const CAREERS_EYEBROW = "JOIN THE TEAM";
+  const ROLE_1_TEXT = roleTitle1.dataset.text || "Head of Growth";
+  const ROLE_2_TEXT = roleTitle2.dataset.text || "Founding Engineer";
   let currentView = "home";
   let animating = false;
   let waitlistSubmitted = false;
@@ -286,7 +290,7 @@
       waitlistView.classList.remove("visible");
     } else if (view === "careers") {
       anime({
-        targets: [careersMessage, careersBack],
+        targets: [roleDivider, careersBack],
         opacity: 0,
         duration: 200,
         easing: "easeOutCubic",
@@ -294,6 +298,8 @@
       await Promise.all([
         scrambleText(careersEyebrow, CAREERS_EYEBROW, 300, "out"),
         scrambleText(careersTitle, CAREERS_TITLE, 350, "out"),
+        scrambleText(roleTitle1, ROLE_1_TEXT, 400, "out"),
+        scrambleText(roleTitle2, ROLE_2_TEXT, 400, "out"),
       ]);
       careersView.classList.remove("visible");
     }
@@ -389,6 +395,8 @@
     } else if (view === "careers") {
       careersTitle.textContent = "";
       careersEyebrow.textContent = "";
+      roleTitle1.textContent = "";
+      roleTitle2.textContent = "";
       careersView.classList.add("visible");
       anime({
         targets: careersEyebrow,
@@ -396,21 +404,23 @@
         duration: 350,
         easing: "easeOutCubic",
       });
-      scrambleText(careersEyebrow, CAREERS_EYEBROW, 450, "in");
-      await scrambleText(careersTitle, CAREERS_TITLE, 550, "in");
       anime({
-        targets: careersMessage,
+        targets: roleDivider,
         opacity: [0, 1],
-        translateY: [6, 0],
-        duration: 500,
-        delay: 120,
+        duration: 400,
+        delay: 400,
         easing: "easeOutCubic",
       });
+      scrambleText(careersEyebrow, CAREERS_EYEBROW, 450, "in");
+      await Promise.all([
+        scrambleText(careersTitle, CAREERS_TITLE, 550, "in"),
+        scrambleText(roleTitle1, ROLE_1_TEXT, 900, "in"),
+        scrambleText(roleTitle2, ROLE_2_TEXT, 900, "in"),
+      ]);
       anime({
         targets: careersBack,
         opacity: [0, 1],
         duration: 400,
-        delay: 250,
         easing: "easeOutCubic",
       });
     }
