@@ -56,12 +56,23 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="/assets/css/styles.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&family=Space+Mono:wght@400&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
-    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&family=Space+Mono:wght@400&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
+    <script
+      defer
+      src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"
+    ></script>
   </head>
   <body class="intro-locked">
     <canvas id="lattice"></canvas>
@@ -1067,7 +1078,7 @@
         Join the waitlist<span class="arrow">→</span>
       </button>
     </div>
-    <script src="/assets/js/lattice-bg.js"></script>
-    <script src="/assets/js/app.js"></script>
+    <script defer src="/assets/js/lattice-bg.js"></script>
+    <script defer src="/assets/js/app.js"></script>
   </body>
 </html>
