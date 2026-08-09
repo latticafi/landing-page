@@ -115,6 +115,7 @@
   const HERO_LINE1 = heroH1.dataset.line1 || "Prediction Markets";
   const HERO_LINE2 = heroH1.dataset.line2 || "at 10X";
   heroH1.textContent = "";
+  heroH1.style.opacity = "1";
   let resizeReady = false;
   const navEl = document.querySelector("nav");
   const tl = anime.timeline({ easing: "easeOutCubic" });

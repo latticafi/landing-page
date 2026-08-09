@@ -56,6 +56,9 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
     <link rel="stylesheet" href="/assets/css/styles.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&family=Space+Mono:wght@400&display=swap"
@@ -177,11 +180,6 @@
         <span class="dim">Prediction Markets</span> at
         <span class="bold">10X</span>
       </h1>
-      <script>
-        // JS-only: clear the pre-rendered headline before first paint so it
-        // scrambles in cleanly. No-JS keeps the static <h1> above.
-        document.getElementById("hero-h1").textContent = "";
-      </script>
       <p class="hero-sub" id="hero-sub">
         Trade the markets you want with the capital you need
       </p>
