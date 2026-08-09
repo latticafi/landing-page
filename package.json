@@ -9,6 +9,8 @@
     "dev": "wrangler dev",
     "dev:remote": "wrangler dev --remote",
     "deploy": "wrangler deploy",
+    "deploy:preview": "wrangler versions upload",
+    "deploy:promote": "wrangler versions deploy",
     "db:create": "wrangler d1 create lattica_waitlist",
     "db:schema": "wrangler d1 migrations apply lattica_waitlist --remote",
     "db:schema:local": "wrangler d1 migrations apply lattica_waitlist --local",
