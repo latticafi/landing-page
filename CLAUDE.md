@@ -2,7 +2,7 @@
 
 Marketing + waitlist site for **Lattica** ("Prediction Markets at 10X" — leverage,
 borrowing, and lending on prediction markets). This is the `landing-page` service of
-the Lattica monorepo. See the parent `../CLAUDE.md` for the wider protocol.
+the wider Lattica codebase; sibling services keep their own `CLAUDE.md` files.
 
 Deployed as a single **Cloudflare Worker** in front of static assets, with a
 D1-backed waitlist API. **No framework, no bundler, no build step** — hand-written
@@ -13,11 +13,13 @@ HTML + vanilla JS + plain CSS served directly.
 - **Runtime:** Cloudflare Workers (ES-module Worker, `compatibility_date 2026-05-23`).
 - **Package manager:** pnpm (`pnpm@11.3.0`, `pnpm-lock.yaml`). `pnpm-workspace.yaml`
   exists only for an `allowBuilds` list — this is not a multi-package workspace.
-- **Deps:** `html-rewriter-wasm` (runtime, meta injection) and `wrangler` (dev).
+- **Deps:** `@sentry/cloudflare` (error monitoring), `html-rewriter-wasm` (runtime),
+  and `wrangler` (dev).
 - **Client-side CDN deps:** anime.js 3.2.2 (animation).
 - **Data:** Cloudflare D1 (`lattica_waitlist`), binding `DB`.
 - **Fonts:** Google Fonts — DM Sans (primary), Space Mono (mono). Dark theme.
-- **No** TypeScript, ESLint, Biome, Prettier, tests, or CI. Deployment is manual.
+- **No** TypeScript, ESLint, Biome, Prettier, or CI. A small Node test covers Worker
+  startup without Sentry; deployment is manual.
 
 ## Layout
 
@@ -31,7 +33,8 @@ landing-page/
 │   ├── assets/js/lattice-bg.js      # Animated <canvas> lattice background
 │   ├── og-image.png, favicons, apple-touch-icon.png, lattica-privy-logo.png
 │   ├── robots.txt, sitemap.xml
-├── migrations/0001_init.sql # D1 `waitlist` table + created_at index
+├── migrations/              # D1 waitlist schema + source provenance migration
+├── test/worker.test.js      # Node test for the no-Sentry Worker path
 ├── wrangler.toml            # All config lives here (no tsconfig/vite/etc.)
 ├── package.json, pnpm-lock.yaml, pnpm-workspace.yaml
 └── .env                     # Local dev secrets (gitignored)
@@ -41,7 +44,7 @@ landing-page/
 
 The site is an **"SPA-lite":** one `index.html`, and `app.js` swaps hero "views"
 (home / whitepapers / waitlist / careers) via History API `pushState` with
-scramble-text animations — no page loads (`PATH_FOR_VIEW`/`VIEW_FOR_VIEW`, `setView`).
+scramble-text animations — no page loads (`PATH_FOR_VIEW`/`VIEW_FOR_PATH`, `setView`).
 
 The Worker does **light SSR of metadata only**. For known routes (`/`, `/whitepapers`,
 `/waitlist`, `/careers`) it serves `index.html` but rewrites `<title>`, description,
@@ -89,7 +92,9 @@ All config is in `wrangler.toml`:
 - **Bindings:** `ASSETS` (`./public`), `DB` (D1 `lattica_waitlist`), `WAITLIST_LIMITER`
   (rate limit), plus `[observability] enabled`.
 - **Vars:** `ALLOWED_ORIGINS` (comma-separated; localhost dev ports + lattica.fi/.finance/.xyz + www).
-- **Secrets** via `wrangler secret put`: `IP_SALT`.
+- **Secrets** via `wrangler secret put`: `IP_SALT`, plus optional `SENTRY_DSN` to
+  enable Sentry wrapping. `SENTRY_DEBUG_ENABLED=true` exposes the error-test route
+  outside production.
 - `.env` holds local dev values (`IP_SALT`).
 
 Note: the monorepo convention is Vault (`vlt run --`) for secrets, but this service
@@ -100,10 +105,14 @@ uses `wrangler secret` / `.env` directly.
 pnpm dev              # wrangler dev (local)
 pnpm dev:remote       # wrangler dev --remote
 pnpm deploy           # wrangler deploy → custom domains (manual, no CI)
+pnpm deploy:preview   # upload a version with a workers.dev preview URL
+pnpm deploy:promote   # promote a previously uploaded version
+pnpm test             # Node's built-in test runner
 
 pnpm db:create        # create D1 lattica_waitlist
 pnpm db:schema        # apply migrations (remote); :local for local
 pnpm db:list / :count # query the waitlist; append :local for local DB
+pnpm db:backup        # export remote D1 to backups/waitlist-YYYY-MM-DD.sql
 pnpm db:reset:local   # wipe + re-migrate local D1 state
 ```
 
