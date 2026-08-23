@@ -1,9 +1,4 @@
-// Shared animated lattice canvas background, used by every page that
-// includes #lattice. Requires anime.js to be loaded first.
-//
-// Exposes window.LatticeBG = { intro, rebuild() } so pages can opt into
-// the fade-in intro sequence (see app.js) or just let it render at full
-// opacity immediately (the default, used by simple pages like careers.html).
+// Requires anime.js and a #lattice canvas.
 (() => {
   const canvas = document.getElementById("lattice");
   if (!canvas) return;

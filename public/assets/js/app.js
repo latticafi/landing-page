@@ -11,9 +11,6 @@
   }
   setTimeout(unlockScroll, 4000);
   const WAITLIST_ENDPOINT = "/api/waitlist";
-  // Canvas lattice background rendering lives in lattice-bg.js (shared
-  // across pages). We reuse its `intro` state object to drive this page's
-  // fade-in sequence, and its rebuild() on resize.
   const intro = window.LatticeBG.intro;
   intro.phase = "waiting";
   intro.ambientOpacity = 0;
