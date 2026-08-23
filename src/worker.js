@@ -1,25 +1,4 @@
-// src/worker.js — Cloudflare Worker
 import { withSentry } from "@sentry/cloudflare";
-
-//
-// Handles:
-//   POST /api/waitlist     → insert into D1 (after origin and rate-limit
-//                            checks; IP is HMAC-hashed)
-//   anything else          → static asset from /public via the ASSETS binding
-//
-// Bindings (wrangler.toml):
-//   - DB                 : D1 database
-//   - ASSETS             : Static assets
-//   - WAITLIST_LIMITER   : Rate-limit namespace (per-IP)
-//
-// Secrets (`wrangler secret put`):
-//   - IP_SALT            : HMAC key used to hash IP addresses
-//   - SENTRY_DSN         : Sentry project DSN
-//
-// Vars (wrangler.toml):
-//   - ALLOWED_ORIGINS    : comma-separated list of allowed Origin headers
-//   - SENTRY_DEBUG_ENABLED: set to "true" outside production to enable the
-//                           Sentry verification route
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAIL_LEN = 254;
@@ -74,12 +53,10 @@ async function hmacIP(ip, salt) {
 }
 
 async function handleWaitlist(request, env) {
-  // 1. Method
   if (request.method !== "POST") {
     return json({ error: "method_not_allowed" }, 405);
   }
 
-  // 2. Origin
   if (!checkOrigin(request, env)) {
     console.warn(
       "waitlist: forbidden origin",
@@ -91,14 +68,12 @@ async function handleWaitlist(request, env) {
     return json({ error: "forbidden_origin" }, 403);
   }
 
-  // 3. Body size guard
   const contentLength = request.headers.get("Content-Length");
 
   if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
     return json({ error: "body_too_large" }, 413);
   }
 
-  // 4. Parse JSON
   let body;
 
   try {
@@ -107,7 +82,6 @@ async function handleWaitlist(request, env) {
     return json({ error: "invalid_json" }, 400);
   }
 
-  // 5. Validate email
   const email = String(body?.email ?? "")
     .trim()
     .toLowerCase();
@@ -116,14 +90,12 @@ async function handleWaitlist(request, env) {
     return json({ error: "invalid_email" }, 400);
   }
 
-  // 6. Raw IP
-  // Used for rate limiting, but never persisted.
+  // Raw IP is used for rate limiting but never persisted.
   const rawIP =
     request.headers.get("CF-Connecting-IP") ||
     request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ||
     null;
 
-  // 7. Rate limit
   if (env.WAITLIST_LIMITER) {
     const { success } = await env.WAITLIST_LIMITER.limit({
       key: rawIP || "anonymous",
@@ -136,7 +108,6 @@ async function handleWaitlist(request, env) {
     }
   }
 
-  // 8. Hash IP for storage
   if (!env.IP_SALT) {
     console.error("waitlist: IP_SALT not configured");
 
@@ -145,7 +116,6 @@ async function handleWaitlist(request, env) {
 
   const ipHash = await hmacIP(rawIP, env.IP_SALT);
 
-  // 9. Insert into D1
   if (!env.DB) {
     console.error("waitlist: D1 binding 'DB' not configured");
 
@@ -172,11 +142,9 @@ async function handleWaitlist(request, env) {
   }
 }
 
-// Canonical production origin, used for canonical + og:url regardless of
-// whether the request arrived through the apex or www hostname.
+// Canonical metadata always points at the apex domain.
 const SITE_ORIGIN = "https://lattica.finance";
 
-// Client-routed views that map to real URLs.
 const ROUTES = {
   "/": {
     title: "Lattica — Leverage, Borrowing & Lending for Prediction Markets",
@@ -223,7 +191,6 @@ function normalizePath(pathname) {
   return pathname;
 }
 
-// Rewrite per-route metadata into the served HTML.
 function injectHtml(response, meta, canonical) {
   return new HTMLRewriter()
     .on("title", {
@@ -284,7 +251,6 @@ export const worker = {
       return handleWaitlist(request, env);
     }
 
-    // Client-routed SPA paths
     const path = normalizePath(url.pathname);
     const meta = ROUTES[path];
 
@@ -297,7 +263,6 @@ export const worker = {
       return injectHtml(index, meta, canonical);
     }
 
-    // Everything else: static asset from /public.
     return env.ASSETS.fetch(request);
   },
 };
