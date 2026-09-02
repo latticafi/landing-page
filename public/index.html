@@ -77,8 +77,13 @@
       /* Critical guard: if the edge delays styles.css, the first paint must
          still be the dark page with hidden nav chrome — never white with an
          unsized nav icon. Mirrors the initial states in styles.css. */
-      html {
+      html,
+      body {
         background: #090909;
+        color: transparent;
+      }
+      a {
+        color: inherit;
       }
       .nav-links li,
       .nav-end,
@@ -96,6 +101,7 @@
       }
     </style>
     <link rel="stylesheet" href="/assets/css/styles.css" />
+    <link rel="stylesheet" href="/assets/css/blog.css" />
     <link
       href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&family=Space+Mono:wght@400&display=swap"
       rel="stylesheet"
@@ -116,21 +122,22 @@
   <body class="intro-locked">
     <canvas id="lattice"></canvas>
     <div class="vignette"></div>
-    <nav>
-      <button class="logo" id="logo-btn" type="button">
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a class="logo" id="logo-btn" href="/" data-view="home">
         <img
           src="/lattica-text-white-logo.png"
           alt="Lattica"
           width="101"
           height="28"
         />
-      </button>
+      </a>
       <ul class="nav-links"></ul>
       <div class="nav-end">
-        <button class="nav-text-btn" id="home-btn">Home</button>
-        <button class="nav-text-btn" id="whitepapers-btn">Whitepapers</button>
-        <button class="nav-text-btn" id="waitlist-btn">Waitlist</button>
-        <button class="nav-text-btn" id="careers-btn">Careers</button>
+        <a class="nav-text-btn" id="home-btn" href="/" data-view="home">Home</a>
+        <a class="nav-text-btn" id="whitepapers-btn" href="/whitepapers" data-view="whitepapers">Whitepapers</a>
+        <a class="nav-text-btn" id="waitlist-btn" href="/waitlist" data-view="waitlist">Waitlist</a>
+        <a class="nav-text-btn" id="careers-btn" href="/careers" data-view="careers">Careers</a>
+        <a class="nav-text-btn" href="/blog/">Blog</a>
         <a
           class="nav-x-link"
           id="nav-x-link"
@@ -195,18 +202,19 @@
       aria-modal="true"
       aria-hidden="true"
     >
-      <button class="mobile-menu-item" data-view="home" type="button">
+      <a class="mobile-menu-item" data-view="home" href="/">
         Home
-      </button>
-      <button class="mobile-menu-item" data-view="whitepapers" type="button">
+      </a>
+      <a class="mobile-menu-item" data-view="whitepapers" href="/whitepapers">
         Whitepapers
-      </button>
-      <button class="mobile-menu-item" data-view="waitlist" type="button">
+      </a>
+      <a class="mobile-menu-item" data-view="waitlist" href="/waitlist">
         Waitlist
-      </button>
-      <button class="mobile-menu-item" data-view="careers" type="button">
+      </a>
+      <a class="mobile-menu-item" data-view="careers" href="/careers">
         Careers
-      </button>
+      </a>
+      <a class="mobile-menu-item" href="/blog/">Blog</a>
       <a
         class="mobile-menu-x"
         href="https://x.com/LatticaFinance"
@@ -227,6 +235,7 @@
         </svg>
       </a>
     </div>
+    <div data-page-content data-page-kind="landing">
     <section class="hero">
       <h1 id="hero-h1" data-line1="Prediction Markets" data-line2="at 10X">
         <span class="dim">Prediction Markets</span> at
@@ -293,7 +302,35 @@
       <div class="careers-view" id="careers-view">
         <div class="careers-eyebrow" id="careers-eyebrow">JOIN THE TEAM</div>
         <h2 class="careers-title-h2" id="careers-title"></h2>
-        <div class="careers-message" id="careers-message">Check back soon.</div>
+        <div class="careers-roles" id="careers-roles">
+          <a
+            href="https://app.dover.com/apply/Lattica/b395c331-c695-4140-bef6-fa555c8cd182/?rs=76643084"
+            class="paper-link"
+            target="_blank"
+            rel="noopener"
+          >
+            <span
+              class="paper-title"
+              id="role-title-1"
+              data-text="Full Stack Engineer"
+              >Full Stack Engineer</span
+            >
+          </a>
+          <div class="paper-divider" id="role-divider"></div>
+          <a
+            href="https://app.dover.com/apply/Lattica/e05cf450-fed5-4ad9-9711-5a63440b9af1/?rs=76643084"
+            class="paper-link"
+            target="_blank"
+            rel="noopener"
+          >
+            <span
+              class="paper-title"
+              id="role-title-2"
+              data-text="Product Designer"
+              >Product Designer</span
+            >
+          </a>
+        </div>
         <button class="back-hint" id="careers-back" type="button">
           ← Back
         </button>
@@ -1133,7 +1170,11 @@
         Join the waitlist<span class="arrow">→</span>
       </button>
     </div>
+    </div>
     <script defer src="/assets/js/lattice-bg.js"></script>
+    <script defer src="/assets/js/text-scramble.js"></script>
+    <script defer src="/assets/js/blog-animations.js"></script>
     <script defer src="/assets/js/app.js"></script>
+    <script defer src="/assets/js/site-router.js"></script>
   </body>
 </html>

@@ -97,6 +97,12 @@ nav.scrolled {
   width: auto;
   display: block;
 }
+.site-nav[data-persistent-ready="true"] .logo,
+.site-nav[data-persistent-ready="true"] .nav-end,
+.site-nav[data-persistent-ready="true"] .nav-menu-btn {
+  opacity: 1;
+  transform: translateY(0);
+}
 .nav-links {
   display: flex;
   gap: 32px;
@@ -244,6 +250,7 @@ nav.scrolled {
   font-weight: 300;
   letter-spacing: -0.015em;
   color: var(--silver);
+  text-decoration: none;
   background: none;
   border: none;
   cursor: pointer;
@@ -1260,14 +1267,19 @@ nav.scrolled {
   line-height: 1.15;
   text-align: center;
 }
-.careers-message {
-  font-family: var(--font-primary);
-  font-size: clamp(16px, 2.2vw, 20px);
-  font-weight: 300;
-  letter-spacing: 0.01em;
-  color: var(--silver);
-  text-align: center;
-  opacity: 0;
+.careers-roles {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 22px;
+}
+.careers-roles .paper-link {
+  padding: 6px 32px;
+}
+.careers-roles .paper-title {
+  font-size: clamp(18px, 2.2vw, 24px);
 }
 .back-hint {
   font-family: var(--font-mono);

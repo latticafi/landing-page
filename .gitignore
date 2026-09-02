@@ -9,6 +9,7 @@ node_modules/
 .headroom
 .tokensave
 backups/
+public/blog/
 
 # One-off seed files contain real user emails (PII) — never commit
 migrations/*seed*.sql

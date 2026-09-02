@@ -4,13 +4,14 @@
   "private": false,
   "type": "module",
   "description": "Lattica landing page on Cloudflare Workers + D1",
-  "packageManager": "pnpm@11.3.0",
+  "packageManager": "pnpm@11.25.0+sha512.5cde925b4f075f725eb71fbae18a42ffe784524789f19b61c731cb8721ec28aaee160e01a8d5af4fedb2a42cdbf300efe23db356b0d4a17b4d63e11f8ab7c956",
   "scripts": {
+    "blog:build": "node scripts/build-blog.js",
     "test": "node --test",
-    "dev": "wrangler dev",
-    "dev:remote": "wrangler dev --remote",
-    "deploy": "wrangler deploy",
-    "deploy:preview": "wrangler versions upload",
+    "dev": "pnpm blog:build && wrangler dev",
+    "dev:remote": "pnpm blog:build && wrangler dev --remote",
+    "deploy": "pnpm blog:build && wrangler deploy",
+    "deploy:preview": "pnpm blog:build && wrangler versions upload",
     "deploy:promote": "wrangler versions deploy",
     "db:create": "wrangler d1 create lattica_waitlist",
     "db:schema": "wrangler d1 migrations apply lattica_waitlist --remote",
@@ -23,10 +24,13 @@
     "db:backup": "wrangler d1 export lattica_waitlist --remote --output backups/waitlist-$(date +%F).sql"
   },
   "dependencies": {
-    "@sentry/cloudflare": "^10.69.0",
+    "@sentry/cloudflare": "^10.73.0",
     "html-rewriter-wasm": "^0.4.1"
   },
   "devDependencies": {
-    "wrangler": "^4.120.0"
+    "gray-matter": "^4.0.3",
+    "markdown-it": "^15.0.1",
+    "markdown-it-footnote": "^4.0.0",
+    "wrangler": "^4.128.0"
   }
 }

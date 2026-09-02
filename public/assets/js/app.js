@@ -1,4 +1,7 @@
 (() => {
+  const landingRoot = document.querySelector('[data-page-kind="landing"]');
+  if (!landingRoot) return;
+
   if ("scrollRestoration" in history) {
     history.scrollRestoration = "manual";
   }
@@ -12,100 +15,7 @@
   setTimeout(unlockScroll, 4000);
   const WAITLIST_ENDPOINT = "/api/waitlist";
   const intro = window.LatticeBG.intro;
-  intro.phase = "waiting";
-  intro.ambientOpacity = 0;
-  const CHARS =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%&";
-  function scrambleText(el, targetText, duration, direction) {
-    return new Promise((resolve) => {
-      const len = targetText.length;
-      let startTime = null;
-      function tick(ts) {
-        if (!startTime) startTime = ts;
-        const progress = Math.min(1, (ts - startTime) / duration);
-        let result = "";
-        for (let i = 0; i < len; i++) {
-          if (targetText[i] === " " || targetText[i] === "\n") {
-            result += targetText[i];
-            continue;
-          }
-          const ct = i / len;
-          if (direction === "in") {
-            const cp = (progress - ct * 0.5) / 0.5;
-            if (cp >= 1) result += targetText[i];
-            else if (cp > 0)
-              result += CHARS[Math.floor(Math.random() * CHARS.length)];
-            else result += "\u00A0";
-          } else {
-            const cp = (progress - ct * 0.4) / 0.6;
-            if (cp >= 1) result += "\u00A0";
-            else if (cp > 0)
-              result += CHARS[Math.floor(Math.random() * CHARS.length)];
-            else result += targetText[i];
-          }
-        }
-        el.textContent = result;
-        if (progress < 1) requestAnimationFrame(tick);
-        else {
-          el.textContent = direction === "in" ? targetText : "";
-          resolve();
-        }
-      }
-      requestAnimationFrame(tick);
-    });
-  }
-  function scrambleHeroTwoTone(el, line1, line2, duration, direction) {
-    return new Promise((resolve) => {
-      const full = line1 + "\n" + line2;
-      const len = full.length;
-      const splitAt = line1.length;
-      let startTime = null;
-      function tick(ts) {
-        if (!startTime) startTime = ts;
-        const progress = Math.min(1, (ts - startTime) / duration);
-        let part1 = "",
-          part2 = "";
-        for (let i = 0; i < len; i++) {
-          const ch = full[i];
-          if (ch === " " || ch === "\n") {
-            if (i <= splitAt) part1 += ch === "\n" ? "" : ch;
-            else part2 += ch;
-            continue;
-          }
-          const ct = i / len;
-          let outCh;
-          if (direction === "in") {
-            const cp = (progress - ct * 0.5) / 0.5;
-            if (cp >= 1) outCh = ch;
-            else if (cp > 0)
-              outCh = CHARS[Math.floor(Math.random() * CHARS.length)];
-            else outCh = "\u00A0";
-          } else {
-            const cp = (progress - ct * 0.4) / 0.6;
-            if (cp >= 1) outCh = "\u00A0";
-            else if (cp > 0)
-              outCh = CHARS[Math.floor(Math.random() * CHARS.length)];
-            else outCh = ch;
-          }
-          if (i < splitAt) part1 += outCh;
-          else if (i > splitAt) part2 += outCh;
-        }
-        el.innerHTML = '<span class="dim">' + part1 + "</span>\n" + part2;
-        if (progress < 1) requestAnimationFrame(tick);
-        else {
-          if (direction === "in")
-            el.innerHTML =
-              '<span class="dim">' +
-              line1 +
-              "</span>\n" +
-              line2.replace("10X", '<span class="bold">10X</span>');
-          else el.innerHTML = "";
-          resolve();
-        }
-      }
-      requestAnimationFrame(tick);
-    });
-  }
+  const { scrambleHeroTwoTone, scrambleText } = window.LatticaTextAnimations;
   const heroH1 = document.getElementById("hero-h1");
   const heroSub = document.getElementById("hero-sub");
   const heroCta = document.getElementById("hero-cta");
@@ -114,69 +24,82 @@
   heroH1.textContent = "";
   heroH1.style.opacity = "1";
   let resizeReady = false;
+  let resizeTimer;
   const navEl = document.querySelector("nav");
-  const tl = anime.timeline({ easing: "easeOutCubic" });
-  intro.phase = "ambient";
-  tl.add({
-    targets: intro,
-    ambientOpacity: [0, 1],
-    duration: 1200,
-    delay: 150,
-    easing: "easeOutCubic",
-    complete: () => {
-      intro.phase = "done";
-    },
+  const preserveShell = navEl.dataset.persistentReady === "true";
+
+  window.addEventListener("resize", () => {
+    if (!resizeReady) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      window.LatticeBG.rebuild();
+    }, 150);
   });
-  tl.add(
-    {
-      targets: navEl,
-      borderBottomColor: ["rgba(255,255,255,0)", "rgba(255,255,255,0.09)"],
-      duration: 700,
-      easing: "linear",
-    },
-    "-=900",
-  );
-  tl.add(
-    {
-      targets: ".logo",
-      opacity: [0, 1],
-      translateY: [-6, 0],
-      duration: 450,
-    },
-    "-=750",
-  );
-  tl.add(
-    {
-      targets: ".nav-links li",
-      opacity: [0, 1],
-      translateY: [-6, 0],
-      duration: 350,
-      delay: anime.stagger(30),
-    },
-    "-=550",
-  );
-  tl.add(
-    {
-      targets: [".nav-end", ".nav-menu-btn"],
-      opacity: [0, 1],
-      translateY: [-6, 0],
-      duration: 350,
+
+  if (preserveShell) {
+    intro.phase = "done";
+    intro.ambientOpacity = 1;
+    resizeReady = true;
+    unlockScroll();
+  } else {
+    intro.phase = "waiting";
+    intro.ambientOpacity = 0;
+    const tl = anime.timeline({ easing: "easeOutCubic" });
+    intro.phase = "ambient";
+    tl.add({
+      targets: intro,
+      ambientOpacity: [0, 1],
+      duration: 1200,
+      delay: 150,
+      easing: "easeOutCubic",
       complete: () => {
-        setTimeout(() => {
-          resizeReady = true;
-        }, 2000);
-        let resizeTimer;
-        window.addEventListener("resize", () => {
-          if (!resizeReady) return;
-          clearTimeout(resizeTimer);
-          resizeTimer = setTimeout(() => {
-            window.LatticeBG.rebuild();
-          }, 150);
-        });
+        intro.phase = "done";
       },
-    },
-    "-=350",
-  );
+    });
+    tl.add(
+      {
+        targets: navEl,
+        borderBottomColor: ["rgba(255,255,255,0)", "rgba(255,255,255,0.09)"],
+        duration: 700,
+        easing: "linear",
+      },
+      "-=900",
+    );
+    tl.add(
+      {
+        targets: ".logo",
+        opacity: [0, 1],
+        translateY: [-6, 0],
+        duration: 450,
+      },
+      "-=750",
+    );
+    tl.add(
+      {
+        targets: ".nav-links li",
+        opacity: [0, 1],
+        translateY: [-6, 0],
+        duration: 350,
+        delay: anime.stagger(30),
+      },
+      "-=550",
+    );
+    tl.add(
+      {
+        targets: [".nav-end", ".nav-menu-btn"],
+        opacity: [0, 1],
+        translateY: [-6, 0],
+        duration: 350,
+        complete: () => {
+          navEl.dataset.persistentReady = "true";
+          setTimeout(() => {
+            resizeReady = true;
+          }, 2000);
+        },
+      },
+      "-=350",
+    );
+  }
   const papersView = document.getElementById("papers-view");
   const waitlistView = document.getElementById("waitlist-view");
   const wpBtn = document.getElementById("whitepapers-btn");
@@ -205,12 +128,32 @@
   const careersBtn = document.getElementById("careers-btn");
   const careersEyebrow = document.getElementById("careers-eyebrow");
   const careersTitle = document.getElementById("careers-title");
-  const careersMessage = document.getElementById("careers-message");
   const careersBack = document.getElementById("careers-back");
+  const roleTitle1 = document.getElementById("role-title-1");
+  const roleTitle2 = document.getElementById("role-title-2");
+  const roleDivider = document.getElementById("role-divider");
   const CAREERS_TITLE = "Careers";
   const CAREERS_EYEBROW = "JOIN THE TEAM";
-  let currentView = "home";
-  let animating = false;
+  const ROLE_1_TEXT = roleTitle1.dataset.text || "Full Stack Engineer";
+  const ROLE_2_TEXT = roleTitle2.dataset.text || "Product Designer";
+  const animatedTextElements = [
+    heroH1,
+    paperTitle1,
+    paperTitle2,
+    waitlistEyebrow,
+    waitlistTitle,
+    careersEyebrow,
+    careersTitle,
+    roleTitle1,
+    roleTitle2,
+  ];
+  let currentView = null;
+  let requestedView = null;
+  let requestedOptions = {};
+  let transitionRevision = 0;
+  let completedTransitionRevision = 0;
+  let transitionPromise = null;
+  let landingLifecycle = 0;
   let waitlistSubmitted = false;
   const PATH_FOR_VIEW = {
     home: "/",
@@ -228,6 +171,11 @@
     let p = pathname;
     if (p.length > 1 && p.endsWith("/")) p = p.slice(0, -1);
     return VIEW_FOR_PATH[p] || "home";
+  }
+  function isLandingPath(pathname) {
+    let p = pathname;
+    if (p.length > 1 && p.endsWith("/")) p = p.slice(0, -1);
+    return Object.hasOwn(VIEW_FOR_PATH, p);
   }
   function updatePath(view, push) {
     const newPath = PATH_FOR_VIEW[view] || "/";
@@ -284,7 +232,7 @@
       waitlistView.classList.remove("visible");
     } else if (view === "careers") {
       anime({
-        targets: [careersMessage, careersBack],
+        targets: [roleDivider, careersBack],
         opacity: 0,
         duration: 200,
         easing: "easeOutCubic",
@@ -292,16 +240,27 @@
       await Promise.all([
         scrambleText(careersEyebrow, CAREERS_EYEBROW, 300, "out"),
         scrambleText(careersTitle, CAREERS_TITLE, 350, "out"),
+        scrambleText(roleTitle1, ROLE_1_TEXT, 400, "out"),
+        scrambleText(roleTitle2, ROLE_2_TEXT, 400, "out"),
       ]);
       careersView.classList.remove("visible");
     }
   }
-  async function enterView(view) {
+  async function enterView(view, options = {}) {
     if (view === "home") {
       heroH1.style.display = "";
       heroCta.style.display = "";
       heroSub.style.display = "";
-      await scrambleHeroTwoTone(heroH1, HERO_LINE1, HERO_LINE2, 550, "in");
+      heroH1.textContent = "";
+      heroSub.style.opacity = "0";
+      heroCta.style.opacity = "0";
+      await scrambleHeroTwoTone(
+        heroH1,
+        HERO_LINE1,
+        HERO_LINE2,
+        options.homeDuration || 550,
+        "in",
+      );
       anime({
         targets: [heroSub, heroCta],
         opacity: [0, 1],
@@ -387,6 +346,8 @@
     } else if (view === "careers") {
       careersTitle.textContent = "";
       careersEyebrow.textContent = "";
+      roleTitle1.textContent = "";
+      roleTitle2.textContent = "";
       careersView.classList.add("visible");
       anime({
         targets: careersEyebrow,
@@ -394,94 +355,173 @@
         duration: 350,
         easing: "easeOutCubic",
       });
-      scrambleText(careersEyebrow, CAREERS_EYEBROW, 450, "in");
-      await scrambleText(careersTitle, CAREERS_TITLE, 550, "in");
       anime({
-        targets: careersMessage,
+        targets: roleDivider,
         opacity: [0, 1],
-        translateY: [6, 0],
-        duration: 500,
-        delay: 120,
+        duration: 400,
+        delay: 400,
         easing: "easeOutCubic",
       });
+      scrambleText(careersEyebrow, CAREERS_EYEBROW, 450, "in");
+      await Promise.all([
+        scrambleText(careersTitle, CAREERS_TITLE, 550, "in"),
+        scrambleText(roleTitle1, ROLE_1_TEXT, 900, "in"),
+        scrambleText(roleTitle2, ROLE_2_TEXT, 900, "in"),
+      ]);
       anime({
         targets: careersBack,
         opacity: [0, 1],
         duration: 400,
-        delay: 250,
         easing: "easeOutCubic",
       });
     }
   }
-  async function setView(newView, opts) {
-    opts = opts || {};
-    if (animating) return;
-    if (newView === currentView) return;
-    if (newView !== "home") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      document.body.classList.add("modal-view");
-    } else {
-      document.body.classList.remove("modal-view");
+  async function runViewTransitions() {
+    try {
+      while (completedTransitionRevision < transitionRevision) {
+        const revision = transitionRevision;
+        const nextView = requestedView;
+        const options = requestedOptions;
+        const shouldReplay = options.replay === true;
+        const previousView = currentView;
+
+        if (
+          previousView &&
+          (previousView !== nextView || shouldReplay) &&
+          options.skipExit !== true
+        ) {
+          await exitView(previousView);
+          if (currentView === previousView) currentView = null;
+        }
+
+        if (revision !== transitionRevision) {
+          completedTransitionRevision = revision;
+          continue;
+        }
+
+        if (!landingRoot.isConnected || !nextView) {
+          currentView = null;
+          completedTransitionRevision = revision;
+          continue;
+        }
+
+        if (currentView !== nextView || shouldReplay) {
+          currentView = nextView;
+          await enterView(nextView, options);
+        }
+        completedTransitionRevision = revision;
+      }
+    } finally {
+      transitionPromise = null;
     }
-    animating = true;
-    updateActiveBtn(newView);
-    updatePath(newView, opts.push !== false);
-    if (!opts.skipExit) {
-      await exitView(currentView);
-    }
-    currentView = newView;
-    await enterView(newView);
-    animating = false;
   }
+
+  function setView(newView, options = {}) {
+    if (newView !== null && !Object.hasOwn(PATH_FOR_VIEW, newView)) {
+      return Promise.resolve(false);
+    }
+
+    const revision = ++transitionRevision;
+    requestedView = newView;
+    requestedOptions = options;
+
+    if (newView) {
+      if (newView !== "home") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        document.body.classList.add("modal-view");
+      } else {
+        document.body.classList.remove("modal-view");
+      }
+      updateActiveBtn(newView);
+      updatePath(newView, options.push !== false);
+    }
+
+    if (!transitionPromise) {
+      transitionPromise = Promise.resolve().then(runViewTransitions);
+    }
+    return transitionPromise.then(
+      () => revision === transitionRevision && currentView === newView,
+    );
+  }
+  function navigateToView(view) {
+    const router = window.LatticaSiteRouter?.router;
+    if (router) return router.navigate(PATH_FOR_VIEW[view]);
+    return setView(view);
+  }
+  window.LatticaLandingNavigate = async (pathname, options = {}) => {
+    if (!landingRoot.isConnected || !isLandingPath(pathname)) return false;
+    const view = viewForPath(pathname);
+
+    return setView(view, {
+      push: options.push !== false,
+      replay: options.replay === true,
+    });
+  };
+  window.LatticaLandingExit = async (root = landingRoot) => {
+    if (root !== landingRoot || !landingRoot.isConnected) return false;
+    if (transitionPromise) {
+      for (const element of animatedTextElements) {
+        window.LatticaTextAnimations.cancelTextAnimation?.(element);
+      }
+    }
+    landingLifecycle += 1;
+    return setView(null);
+  };
   wpBtn.addEventListener("click", (e) => {
+    if (!landingRoot.isConnected) return;
     e.preventDefault();
-    setView(currentView === "whitepapers" ? "home" : "whitepapers");
+    navigateToView(currentView === "whitepapers" ? "home" : "whitepapers");
   });
   waitlistBtn.addEventListener("click", (e) => {
+    if (!landingRoot.isConnected) return;
     e.preventDefault();
-    setView(currentView === "waitlist" ? "home" : "waitlist");
+    navigateToView(currentView === "waitlist" ? "home" : "waitlist");
   });
   careersBtn.addEventListener("click", (e) => {
+    if (!landingRoot.isConnected) return;
     e.preventDefault();
-    setView(currentView === "careers" ? "home" : "careers");
+    navigateToView(currentView === "careers" ? "home" : "careers");
   });
   homeBtn.addEventListener("click", (e) => {
+    if (!landingRoot.isConnected) return;
     e.preventDefault();
     if (currentView !== "home") {
-      setView("home");
+      navigateToView("home");
     } else {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   });
   logoBtn.addEventListener("click", (e) => {
+    if (!landingRoot.isConnected) return;
     e.preventDefault();
     if (currentView !== "home") {
-      setView("home");
+      navigateToView("home");
     } else {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   });
   heroCta.addEventListener("click", (e) => {
     e.preventDefault();
-    setView("waitlist");
+    navigateToView("waitlist");
   });
   const hiwCta = document.getElementById("hiw-cta");
   if (hiwCta) {
     hiwCta.addEventListener("click", (e) => {
       e.preventDefault();
-      setView("waitlist");
+      navigateToView("waitlist");
     });
   }
   papersBack.addEventListener("click", () => {
-    if (currentView === "whitepapers") setView("home");
+    if (currentView === "whitepapers") navigateToView("home");
   });
   waitlistBack.addEventListener("click", () => {
-    if (currentView === "waitlist") setView("home");
+    if (currentView === "waitlist") navigateToView("home");
   });
   careersBack.addEventListener("click", () => {
-    if (currentView === "careers") setView("home");
+    if (currentView === "careers") navigateToView("home");
   });
   function updateNavScrolled() {
+    if (!landingRoot.isConnected) return;
     if (window.scrollY > 24) navEl.classList.add("scrolled");
     else navEl.classList.remove("scrolled");
   }
@@ -548,30 +588,41 @@
     return mobileMenu.classList.contains("open");
   }
   menuBtn.addEventListener("click", (e) => {
+    if (!landingRoot.isConnected) return;
     e.stopPropagation();
     isMenuOpen() ? closeMenu() : openMenu();
   });
   document.querySelectorAll(".mobile-menu-item").forEach((btn) => {
     btn.addEventListener("click", (e) => {
-      e.preventDefault();
+      if (!landingRoot.isConnected) return;
       const view = btn.dataset.view;
       closeMenu();
+      if (!view) return;
+      e.preventDefault();
       setTimeout(() => {
-        setView(currentView === view ? "home" : view);
+        if (!landingRoot.isConnected) return;
+        navigateToView(currentView === view ? "home" : view);
       }, 250);
     });
   });
   mobileMenu.addEventListener("click", (e) => {
+    if (!landingRoot.isConnected) return;
     if (e.target === mobileMenu) closeMenu();
   });
   document.addEventListener("keydown", (e) => {
+    if (!landingRoot.isConnected) return;
     if (e.key === "Escape" && isMenuOpen()) closeMenu();
   });
   const mq = window.matchMedia("(min-width: 769px)");
   mq.addEventListener("change", (e) => {
+    if (!landingRoot.isConnected) return;
     if (e.matches && isMenuOpen()) closeMenu();
   });
   window.addEventListener("popstate", () => {
+    if (!landingRoot.isConnected || !isLandingPath(window.location.pathname)) {
+      return;
+    }
+    if (window.LatticaSiteRouter?.router) return;
     const wantView = viewForPath(window.location.pathname);
     if (wantView !== currentView) setView(wantView, { push: false });
   });
@@ -639,38 +690,31 @@
     }
   });
   const startView = viewForPath(window.location.pathname);
+  const startLifecycle = landingLifecycle;
+  const startTransitionRevision = transitionRevision;
   setTimeout(() => {
-    if (startView === "home") {
-      updateActiveBtn("home");
-      scrambleHeroTwoTone(heroH1, HERO_LINE1, HERO_LINE2, 650, "in").then(
-        () => {
-          anime({
-            targets: [heroSub, heroCta],
-            opacity: [0, 1],
-            translateY: [6, 0],
-            duration: 450,
-            delay: anime.stagger(80),
-            easing: "easeOutCubic",
-            complete: unlockScroll,
-          });
-        },
-      );
-    } else {
-      currentView = "home";
-      document.body.classList.add("modal-view");
-      updateActiveBtn(startView);
-      updatePath(startView, false);
+    if (
+      !landingRoot.isConnected ||
+      startLifecycle !== landingLifecycle ||
+      startTransitionRevision !== transitionRevision
+    ) {
+      return;
+    }
+    if (startView !== "home") {
       heroH1.style.display = "none";
       heroCta.style.display = "none";
       heroSub.style.display = "none";
-      (async () => {
-        animating = true;
-        await enterView(startView);
-        currentView = startView;
-        animating = false;
-        unlockScroll();
-      })();
     }
+    setView(startView, {
+      push: false,
+      replay: true,
+      skipExit: true,
+      homeDuration: 650,
+    }).then(() => {
+      if (landingRoot.isConnected && startLifecycle === landingLifecycle) {
+        unlockScroll();
+      }
+    });
   }, 500);
   function makeSlider(wrap, { min, max, value, step, onChange }) {
     const track = wrap.querySelector('[data-role="slider-track"]');

@@ -5,4 +5,25 @@
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
+  <url>
+    <loc>https://lattica.finance/blog/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://lattica.finance/blog/the-death-of-parlays-and-new-pairs/</loc>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://lattica.finance/blog/prediction-markets-need-liquidity-first/</loc>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://lattica.finance/blog/prediction-markets-are-the-place-to-build/</loc>
+    <changefreq>monthly</changefreq>
+  </url>
+  <url>
+    <loc>https://lattica.finance/blog/insurance-on-anything/</loc>
+    <changefreq>monthly</changefreq>
+  </url>
 </urlset>
