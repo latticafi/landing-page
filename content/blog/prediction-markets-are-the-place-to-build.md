@@ -1,6 +1,7 @@
 ---
 title: "Prediction Markets Are THE Place To Build"
 author: "Steve"
+date: "2026-07-08"
 order: 3
 ---
 

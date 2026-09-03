@@ -44,6 +44,7 @@ async function createFixture() {
     `---
 title: "Market Structure"
 author: "Steve"
+date: "2026-08-18"
 order: 1
 ---
 
@@ -254,7 +255,7 @@ test("marks generated blog content for persistent page navigation", async () => 
   }
 });
 
-test("renders the frontmatter author on the blog listing and article", async () => {
+test("renders dated metadata from article frontmatter", async () => {
   const fixture = await createFixture();
 
   const result = runBuild(fixture.root);
@@ -266,10 +267,10 @@ test("renders the frontmatter author on the blog listing and article", async () 
     "utf8",
   );
 
-  assert.match(index, />By Steve · 1 min read</);
+  assert.match(index, />By Steve · August 18, 2026 · 1 min read</);
   assert.match(
     article,
-    /<p class="article-meta" data-blog-scramble>By Steve · 1 min read<\/p>/,
+    /<p class="article-meta" data-blog-scramble>By Steve · August 18, 2026 · 1 min read<\/p>/,
   );
   assert.match(
     article,
@@ -312,6 +313,7 @@ test("orders the blog index by frontmatter order", async () => {
     `---
 title: "Alpha"
 author: "Steve"
+date: "2026-08-19"
 order: 2
 ---
 
@@ -397,6 +399,7 @@ test("rejects an article that references a missing local image", async () => {
     `---
 title: "Missing Image"
 author: "Steve"
+date: "2026-08-19"
 order: 2
 ---
 
@@ -419,6 +422,7 @@ test("rejects an image path that escapes the blog image directory", async () => 
     `---
 title: "Unsafe Image"
 author: "Steve"
+date: "2026-08-19"
 order: 2
 ---
 
@@ -499,7 +503,54 @@ test("adds the blog index and articles to the sitemap", async () => {
   assert.match(sitemap, /<loc>https:\/\/lattica\.finance\/blog\/<\/loc>/);
   assert.match(
     sitemap,
-    /<loc>https:\/\/lattica\.finance\/blog\/market-structure\/<\/loc>/,
+    /<loc>https:\/\/lattica\.finance\/blog\/market-structure\/<\/loc>\s*<lastmod>2026-08-18<\/lastmod>/,
+  );
+});
+
+test("rejects an article without a frontmatter date", async () => {
+  const fixture = await createFixture();
+  await writeFile(
+    join(fixture.contentDir, "market-structure.md"),
+    `---
+title: "Market Structure"
+author: "Steve"
+order: 1
+---
+
+Article without a date.
+`,
+  );
+
+  const result = runBuild(fixture.root);
+
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stderr,
+    /market-structure\.md requires a valid ISO frontmatter date/,
+  );
+});
+
+test("rejects an impossible frontmatter date", async () => {
+  const fixture = await createFixture();
+  await writeFile(
+    join(fixture.contentDir, "market-structure.md"),
+    `---
+title: "Market Structure"
+author: "Steve"
+date: "2026-02-30"
+order: 1
+---
+
+Article with an impossible date.
+`,
+  );
+
+  const result = runBuild(fixture.root);
+
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stderr,
+    /market-structure\.md requires a valid ISO frontmatter date/,
   );
 });
 
@@ -531,6 +582,7 @@ test("limits generated descriptions to a search-friendly length", async () => {
     `---
 title: "Market Structure"
 author: "Steve"
+date: "2026-08-18"
 order: 1
 ---
 
@@ -615,6 +667,7 @@ test("rejects a missing image declared with reference Markdown", async () => {
     `---
 title: "Reference Image"
 author: "Steve"
+date: "2026-08-19"
 order: 2
 ---
 
@@ -664,6 +717,7 @@ test("rejects a non-string frontmatter description", async () => {
     `---
 title: "Invalid Description"
 author: "Steve"
+date: "2026-08-19"
 description:
   text: "Not a string"
 order: 2
@@ -689,6 +743,7 @@ test("rejects a frontmatter order that is not a positive integer", async () => {
     `---
 title: "Invalid Order"
 author: "Steve"
+date: "2026-08-19"
 order: first
 ---
 
@@ -732,6 +787,7 @@ test("derives descriptions from the first paragraph instead of a heading", async
     `---
 title: "Market Structure"
 author: "Steve"
+date: "2026-08-18"
 order: 1
 ---
 

@@ -1,6 +1,7 @@
 ---
 title: "The Death Of Parlays And New Pairs"
 author: "Steve"
+date: "2026-08-18"
 order: 1
 ---
 

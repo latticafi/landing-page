@@ -1,6 +1,7 @@
 ---
 title: "Prediction Markets Need Liquidity First, Everything Else Later"
 author: "Steve"
+date: "2026-08-10"
 order: 2
 ---
 

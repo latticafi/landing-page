@@ -20,6 +20,12 @@ import MarkdownIt from "markdown-it";
 import footnote from "markdown-it-footnote";
 
 const SITE_ORIGIN = "https://lattica.finance";
+const DISPLAY_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
 
 function escapeHtml(value) {
   return String(value)
@@ -111,6 +117,28 @@ function summarize(value, maxLength = 160) {
   const candidate = normalized.slice(0, maxLength - 1);
   const boundary = candidate.lastIndexOf(" ");
   return `${candidate.slice(0, boundary > 0 ? boundary : candidate.length).trimEnd()}…`;
+}
+
+function isIsoDate(value) {
+  if (typeof value !== "string") return false;
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+function displayDate(value) {
+  return DISPLAY_DATE_FORMATTER.format(new Date(`${value}T00:00:00Z`));
 }
 
 function imageSources(markdown, source) {
@@ -381,7 +409,7 @@ function articlePage(article) {
         <header class="article-header">
           <p class="blog-eyebrow" data-blog-scramble>Article</p>
           <h1><span data-blog-scramble>${escapeHtml(article.title)}</span></h1>
-          <p class="article-meta" data-blog-scramble>By ${escapeHtml(article.author)} · ${article.readingTime} min read</p>
+          <p class="article-meta" data-blog-scramble>By ${escapeHtml(article.author)} · ${displayDate(article.date)} · ${article.readingTime} min read</p>
         </header>
         <div class="article-body">${article.html}</div>
       </article>
@@ -402,7 +430,7 @@ function indexPage(articles) {
           <span class="article-card-copy">
             <span class="article-card-title">${escapeHtml(article.title)}</span>
             <span class="article-card-description">${escapeHtml(article.description)}</span>
-            <span class="article-card-meta">By ${escapeHtml(article.author)} · ${article.readingTime} min read</span>
+            <span class="article-card-meta">By ${escapeHtml(article.author)} · ${displayDate(article.date)} · ${article.readingTime} min read</span>
           </span>
           <span class="article-card-arrow" aria-hidden="true">↗</span>
         </a>`,
@@ -444,6 +472,7 @@ function sitemap(articles) {
     .map(
       (article) => `  <url>
     <loc>${SITE_ORIGIN}/blog/${article.slug}/</loc>
+    <lastmod>${article.date}</lastmod>
     <changefreq>monthly</changefreq>
   </url>`,
     )
@@ -508,6 +537,12 @@ async function loadArticles(contentDir) {
       throw new Error(`${file} requires a frontmatter author`);
     }
 
+    const date = parsed.data.date;
+
+    if (!isIsoDate(date)) {
+      throw new Error(`${file} requires a valid ISO frontmatter date`);
+    }
+
     const imageDimensions = await validateImages(
       file,
       parsed.content,
@@ -538,6 +573,7 @@ async function loadArticles(contentDir) {
     articles.push({
       title,
       author,
+      date,
       slug,
       description,
       order: hasOrder ? order : Number.MAX_SAFE_INTEGER,

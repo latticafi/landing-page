@@ -1,6 +1,7 @@
 ---
 title: "Insurance On Anything"
 author: "Steve"
+date: "2026-06-16"
 order: 4
 ---
 
