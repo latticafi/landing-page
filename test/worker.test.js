@@ -42,7 +42,7 @@ test("offers only Lattica brand names to search engines", async () => {
   const website = structuredData.find((item) => item["@type"] === "WebSite");
 
   assert.equal(website.name, "Lattica");
-  assert.deepEqual(website.alternateName, ["Lattica Finance"]);
+  assert.equal(website.alternateName, undefined);
 });
 
 test("links the organization schema to the canonical Lattica profile", async () => {
