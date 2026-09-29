@@ -236,6 +236,159 @@ function injectHtml(response, meta, canonical) {
     .transform(response);
 }
 
+// --- Referral invite links ---------------------------------------------------
+// The mobile app shares https://lattica.finance/ref/<code>. With the app
+// installed, iOS opens the link in the app straight away, thanks to the
+// app-site-association file below; otherwise this page shows the code to
+// type in and a button to install the app.
+
+const AASA_PATH = "/.well-known/apple-app-site-association";
+const REFERRAL_PREFIX = "/ref/";
+// Same alphabet as the api: 8 uppercase characters without 0/O/1/I.
+const REFERRAL_CODE_RE = /^[A-HJ-NP-Z2-9]{8}$/;
+const HANDLE_RE = /^[a-z0-9_]{3,20}$/;
+const REFERRER_LOOKUP_TIMEOUT_MS = 1500;
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function appleAppSiteAssociation(env) {
+  const appIDs = (env.APPLE_APP_IDS || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  const response = json({
+    applinks: {
+      details: [
+        {
+          appIDs,
+          components: [
+            { "/": `${REFERRAL_PREFIX}*`, comment: "Referral invite links" },
+          ],
+        },
+      ],
+    },
+  });
+
+  response.headers.set("Cache-Control", "public, max-age=3600");
+
+  return response;
+}
+
+// The code owner's handle from the api: null when unknown or unreachable (the
+// page still renders), "missing" when the api says the code does not exist.
+async function referrerHandle(code, env) {
+  if (!env.API_ORIGIN) return null;
+
+  try {
+    const response = await fetch(`${env.API_ORIGIN}/referrals/codes/${code}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(REFERRER_LOOKUP_TIMEOUT_MS),
+    });
+
+    if (response.status === 404) return "missing";
+    if (!response.ok) return null;
+
+    const body = await response.json();
+    const handle = body?.handle;
+
+    return typeof handle === "string" && HANDLE_RE.test(handle) ? handle : null;
+  } catch {
+    return null;
+  }
+}
+
+function invitePage({ code, handle, missing, testflightUrl }) {
+  const title = missing
+    ? "This invite link isn't valid"
+    : "You're invited to Lattica";
+  const description =
+    "Trade sports with paper money at real prices. Open the invite in the Lattica app.";
+
+  const headline = missing
+    ? "This invite link isn&#039;t valid"
+    : handle
+      ? `<span class="bold">@${escapeHtml(handle)}</span> invited you to Lattica`
+      : `You&#039;re invited to <span class="bold">Lattica</span>`;
+
+  const details = missing
+    ? `<p class="invite-hint">Check the link with whoever sent it, or get the app and start without a code.</p>`
+    : `<p class="invite-code">${escapeHtml(code)}</p>
+      <p class="invite-hint">Enter this code in the app if it did not open automatically.</p>`;
+
+  const button = testflightUrl
+    ? `<a class="waitlist-submit invite-button" href="${escapeHtml(testflightUrl)}">Get the app</a>`
+    : "";
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapeHtml(title)} — Lattica</title>
+    <meta name="description" content="${escapeHtml(description)}" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#090909" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Lattica" />
+    <meta property="og:title" content="${escapeHtml(title)}" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
+    <meta property="og:image" content="${SITE_ORIGIN}/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <style>html, body { background: #090909; color: transparent; } a { color: inherit; }</style>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <link rel="stylesheet" href="/assets/css/blog.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=Space+Mono:wght@400&display=swap" rel="stylesheet" />
+    <style>
+      .invite h1 { color: var(--white); }
+      .invite-hint { margin-top: 18px; max-width: 420px; color: var(--silver); font-size: 15px; line-height: 1.5; }
+      .invite-code { margin-top: 28px; font-family: var(--font-mono); font-size: 32px; letter-spacing: 0.28em; color: var(--white); user-select: all; }
+      .invite-button { display: inline-block; margin-top: 36px; text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <main class="hero invite">
+      <p class="blog-eyebrow">Referral</p>
+      <h1>${headline}</h1>
+      ${details}
+      ${button}
+    </main>
+  </body>
+</html>
+`;
+}
+
+async function handleReferral(code, env) {
+  const handle = await referrerHandle(code, env);
+  const missing = handle === "missing";
+
+  return new Response(
+    invitePage({
+      code,
+      handle: missing ? null : handle,
+      missing,
+      testflightUrl: env.TESTFLIGHT_URL || null,
+    }),
+    {
+      status: missing ? 404 : 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    },
+  );
+}
+
 export const worker = {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -251,7 +404,20 @@ export const worker = {
       return handleWaitlist(request, env);
     }
 
+    if (url.pathname === AASA_PATH) {
+      return appleAppSiteAssociation(env);
+    }
+
     const path = normalizePath(url.pathname);
+
+    if (path.startsWith(REFERRAL_PREFIX)) {
+      const code = path.slice(REFERRAL_PREFIX.length).toUpperCase();
+
+      if (REFERRAL_CODE_RE.test(code)) {
+        return handleReferral(code, env);
+      }
+    }
+
     const meta = ROUTES[path];
 
     if (meta) {

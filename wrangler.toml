@@ -17,7 +17,7 @@ preview_urls = true
 [assets]
 directory = "./public"
 binding = "ASSETS"
-run_worker_first = ["/", "/index.html"]
+run_worker_first = ["/", "/index.html", "/ref/*", "/.well-known/apple-app-site-association"]
 
 # D1 database binding. After running `pnpm run db:create`, paste the
 # resulting database_id below.
@@ -37,6 +37,14 @@ simple = { limit = 10, period = 60 }
 # Add your production domain(s) here before deploying.
 [vars]
 ALLOWED_ORIGINS = "http://localhost:8787,http://localhost:8788,http://localhost:3000,https://lattica.fi,https://www.lattica.fi,https://lattica.finance,https://www.lattica.finance,https://lattica.xyz,https://www.lattica.xyz"
+# Referral invite links: /ref/<code> and /.well-known/apple-app-site-association.
+# Team ID + bundle id of every iOS build that may open the links, comma-separated.
+APPLE_APP_IDS = "Z7APZUZ7W5.com.lattica.lattica.beta"
+# Where "Get the app" sends a friend who does not have the app installed.
+TESTFLIGHT_URL = "https://testflight.apple.com/join/gPSbYRtp"
+# Origin of the Lattica api, for "@handle invited you". Leave unset until the api
+# has a public host; the page renders without the name when unset or unreachable.
+# API_ORIGIN = "https://api-staging.lattica.finance"
 
 [observability]
 enabled = true

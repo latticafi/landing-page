@@ -54,6 +54,14 @@ in `worker.js`). All routes canonicalize to `https://lattica.finance/`.
 Everything else falls through to the `ASSETS` static-asset binding. `run_worker_first`
 is set for `/` and `/index.html` so the Worker can inject meta before those are served.
 
+Two more paths are handled in the Worker (and listed in `run_worker_first`):
+`/ref/<code>`, the invite page behind the mobile app's referral links
+(`handleReferral`: shows the code, a "Get the app" button to `TESTFLIGHT_URL` and,
+when `API_ORIGIN` is set, the referrer's handle from the api), and
+`/.well-known/apple-app-site-association` (`appleAppSiteAssociation`: the JSON that
+lets iOS open `/ref/*` links in the app, built from `APPLE_APP_IDS`). Both are plain
+template strings, never `HTMLRewriter`, so `node --test` can exercise them.
+
 ### Page sections (all in `index.html`)
 - **Hero** — headline + "Join the waitlist" CTA; hosts the four swappable views.
 - **How It Works** (MARGIN) — three interactive mock cards: LEVERAGE (long/short,
@@ -91,7 +99,9 @@ All config is in `wrangler.toml`:
 - **Custom domains:** `lattica.finance`, `www.lattica.finance` (both `custom_domain`).
 - **Bindings:** `ASSETS` (`./public`), `DB` (D1 `lattica_waitlist`), `WAITLIST_LIMITER`
   (rate limit), plus `[observability] enabled`.
-- **Vars:** `ALLOWED_ORIGINS` (comma-separated; localhost dev ports + lattica.fi/.finance/.xyz + www).
+- **Vars:** `ALLOWED_ORIGINS` (comma-separated; localhost dev ports + lattica.fi/.finance/.xyz + www);
+  `APPLE_APP_IDS` and `TESTFLIGHT_URL` for the referral invite page, plus optional
+  `API_ORIGIN` (unset until the api has a public host).
 - **Secrets** via `wrangler secret put`: `IP_SALT`, plus optional `SENTRY_DSN` to
   enable Sentry wrapping. `SENTRY_DEBUG_ENABLED=true` exposes the error-test route
   outside production.
