@@ -165,7 +165,7 @@ test("escapes whatever the api or the config hands it", async () => {
   );
   const html = await response.text();
 
-  assert.doesNotMatch(html, /<script>/);
+  assert.equal(html.includes("<script"), false);
   assert.match(html, /&quot;&gt;&lt;script&gt;/);
 });
 
